@@ -178,6 +178,7 @@ const drop=$('drop');
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
 document.addEventListener('drop',e=>{e.dataTransfer.files.length&&loadFiles([...e.dataTransfer.files])});
 async function readBook(buf){
+  if(typeof XLSX==="undefined")throw new Error("библиотека чтения Excel ещё не загружена: подключитесь к интернету и перезапустите приложение");
   try{return XLSX.read(buf,{type:'array'})}
   catch(e){
     // Файлы LibreOffice: пересобираем архив и читаем заново
@@ -503,7 +504,7 @@ function renderNorms(){
   $('nb').innerHTML=Object.entries(NORMS['Мальчики']).map(([k,v])=>{const i=k.lastIndexOf(' ');return `<tr><td><b>${esc(k.slice(0,i))}, ${k.slice(i+1)} м</b></td>`+v.map(x=>`<td class="t">${x==null?'—':fS(x)}</td>`).join('')+'</tr>'}).join('');
 }
 renderNorms();
-async function loadFiles(files){
+async function loadFiles(files,silent){
   const errs=[];let res='',go='';
   for(const f of files){
     try{
@@ -535,7 +536,7 @@ async function loadFiles(files){
     showNotes();
     setSub();
     init();saveState();
-    if(go)showTab(go);
+    if(go&&!silent)showTab(go);
   }
 }
 const uniq=k=>[...new Set(rows.map(r=>r[k]).filter(Boolean))];
@@ -696,7 +697,18 @@ addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEv=e;$('ins
 addEventListener('appinstalled',()=>$('inst').classList.add('hide'));
 $('inst').onclick=async()=>{if(!installEv)return;installEv.prompt();await installEv.userChoice;installEv=null;$('inst').classList.add('hide')};
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-restoreState();
+// ---- протоколы, которые лежат в папке data рядом с программой (список — в data/index.json)
+async function loadBundled(){
+  try{
+    const r=await fetch('data/index.json',{cache:'no-cache'});if(!r.ok)return;
+    const list=await r.json(),files=[];
+    for(const name of list){
+      try{const rr=await fetch('data/'+encodeURIComponent(name),{cache:'no-cache'});if(rr.ok)files.push(new File([await rr.blob()],name))}catch(e){}
+    }
+    if(files.length)await loadFiles(files,true);
+  }catch(e){}
+}
+restoreState().finally(loadBundled);
 </script>
 </body>
 </html>
