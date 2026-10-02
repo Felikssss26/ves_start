@@ -3,6 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+(function(){try{
+  var m=localStorage.getItem('ves-view')||'pc',narrow=Math.min(screen.width,screen.height)<700,pc=m==='pc'&&narrow;
+  if(pc)document.querySelector('meta[name=viewport]').setAttribute('content','width=820, viewport-fit=cover');
+  document.documentElement.dataset.view=pc?'pc':'auto';
+}catch(e){}})();
+</script>
 <title>ВЕСЁЛЫЕ СТАРТЫ: результаты и статистика соревнований</title>
 <meta name="theme-color" content="#12303b">
 <meta name="mobile-web-app-capable" content="yes">
@@ -82,6 +89,15 @@ header,main{position:relative;z-index:1}
 #drop.over{background:var(--accbg)}
 #cbox th{white-space:normal}
 #cbox td:first-child,#cbox th:first-child{white-space:nowrap}
+html[data-view="pc"]{overflow-x:hidden}
+html[data-view="pc"] body{font-size:15px}
+html[data-view="pc"] table{min-width:0!important}
+html[data-view="pc"] th,html[data-view="pc"] #cbox td:first-child,html[data-view="pc"] #cbox th:first-child{white-space:normal}
+html[data-view="pc"] td,html[data-view="pc"] th{padding:6px 4px}
+html[data-view="pc"] td.pl{width:36px}
+html[data-view="pc"] nav{flex-wrap:wrap;overflow-x:visible}
+html[data-view="pc"] nav button{padding:10px 9px}
+html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 .hide{display:none!important}
 </style>
 </head>
@@ -92,6 +108,7 @@ header,main{position:relative;z-index:1}
   <button class="btn hide" id="inst">Установить</button>
   <button class="btn ghost" id="theme" aria-label="Сменить тему">Тема</button>
   <button class="btn ghost hide" id="clr" title="Удалить загруженные данные с этого устройства">Очистить</button>
+  <button class="btn ghost hide" id="vw" title="Переключить вид: как на компьютере / для телефона">Вид</button>
   <input type="file" id="file" accept=".xlsx,.xls" multiple class="hide">
 </header>
 <main>
@@ -169,6 +186,11 @@ function fmtT(v){
 }
 // theme
 const root=document.documentElement;
+(function(){
+  const pc=document.documentElement.dataset.view==='pc';
+  if(Math.min(screen.width,screen.height)<700){$('vw').classList.remove('hide');$('vw').textContent=pc?'Вид: ПК':'Вид: телефон'}
+  $('vw').onclick=()=>{try{localStorage.setItem('ves-view',pc?'phone':'pc')}catch(e){}location.reload()};
+})();
 $('theme').onclick=()=>{root.dataset.theme=root.dataset.theme==='dark'?'light':'dark'};
 // load
 $('pick').onclick=()=>$('file').click();
@@ -416,7 +438,7 @@ function renderCmp(){
       b+=`<td class="t">${dl==null?'—':`<span style="color:${dl<=0?'var(--ok)':'var(--bad)'};font-weight:600">${dS(dl)}</span>`}</td>${nrCell(o,vals)}</tr>`;
     }
     cc.textContent=n+' · стартов: '+nst+' · медалей: '+nm;
-    box.innerHTML=wrapT(420+comps.length*140,'<th>Дистанция'+comps.map(c=>th(c.lab)).join('')+'<th>Динамика<th>До следующего разряда',b)+'<p style="color:var(--mute);margin:8px 2px">★ — личный рекорд среди загруженных соревнований. Динамика — разница между двумя последними стартами на дистанции (зелёный — быстрее). Сравнивайте с учётом длины бассейна. «До следующего разряда» считается по лучшему времени на дистанции с учётом имеющегося разряда; только для мальчиков и юношей.</p>'+hint;
+    box.innerHTML=wrapT(380+comps.length*110,'<th>Дистанция'+comps.map(c=>th(c.lab)).join('')+'<th>Динамика<th>До следующего разряда',b)+'<p style="color:var(--mute);margin:8px 2px">★ — личный рекорд среди загруженных соревнований. Динамика — разница между двумя последними стартами на дистанции (зелёный — быстрее). Сравнивайте с учётом длины бассейна. «До следующего разряда» считается по лучшему времени на дистанции с учётом имеющегося разряда; только для мальчиков и юношей.</p>'+hint;
   }else if(m==='d'){
     const dk=$('cd').value,sx=$('cx').value,gp=$('cg').value;
     const F=c=>c.rows.filter(r=>dkey(r.dist)===dk&&(!sx||r.sex===sx)&&(!gp||String(r.yob)===gp)&&T(r)!=null);
