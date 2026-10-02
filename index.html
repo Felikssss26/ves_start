@@ -84,6 +84,7 @@ tr.hp td{background:var(--accbg);font-weight:600;color:var(--acc)}
 /* фирменный фон: логотип за содержимым, с низкой непрозрачностью; таблицы и карточки полупрозрачные, чтобы читался текст */
 body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:var(--logo) center 60%/min(94vw,1200px) auto no-repeat;opacity:var(--logoA)}
 header,main{position:relative;z-index:1}
+header{z-index:5}
 #nt{background:var(--card)}
 .wrap,.card,#drop,#nt{background:color-mix(in srgb,var(--card) 84%,transparent)}
 #drop.over{background:var(--accbg)}
@@ -98,17 +99,27 @@ html[data-view="pc"] td.pl{width:36px}
 html[data-view="pc"] nav{flex-wrap:wrap;overflow-x:visible}
 html[data-view="pc"] nav button{padding:10px 9px}
 html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
+.menuwrap{position:relative}
+.kebab{font-size:22px;line-height:1;padding:6px 14px;min-width:46px}
+.menu{position:absolute;right:0;top:calc(100% + 8px);z-index:50;min-width:230px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.3);padding:6px;display:flex;flex-direction:column;gap:2px}
+.menu button{background:none;border:0;color:var(--ink);text-align:left;padding:12px;border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap}
+.menu button:hover,.menu button:focus-visible{background:var(--accbg)}
 .hide{display:none!important}
 </style>
 </head>
 <body>
 <header>
   <h1 id="title"><b>ВЕСЁЛЫЕ СТАРТЫ</b>: результаты и статистика соревнований<small id="sub">Загрузите файлы Excel: итоги, заявку, стартовый протокол</small></h1>
-  <button class="btn" id="pick">Открыть файлы…</button>
-  <button class="btn hide" id="inst">Установить</button>
-  <button class="btn ghost" id="theme" aria-label="Сменить тему">Тема</button>
-  <button class="btn ghost hide" id="clr" title="Удалить загруженные данные с этого устройства">Очистить</button>
-  <button class="btn ghost hide" id="vw" title="Переключить вид: как на компьютере / для телефона">Вид</button>
+  <div class="menuwrap">
+    <button class="btn ghost kebab" id="kebab" aria-label="Меню" aria-haspopup="true" aria-expanded="false" aria-controls="menu">⋮</button>
+    <div class="menu hide" id="menu" role="menu">
+      <button id="pick" role="menuitem">Открыть файлы…</button>
+      <button id="inst" class="hide" role="menuitem">Установить приложение</button>
+      <button id="theme" role="menuitem">Тёмная тема</button>
+      <button id="vw" class="hide" role="menuitem" title="Переключить вид: как на компьютере / для телефона">Вид</button>
+      <button id="clr" class="hide" role="menuitem" title="Удалить загруженные данные с этого устройства">Очистить данные</button>
+    </div>
+  </div>
   <input type="file" id="file" accept=".xlsx,.xls" multiple class="hide">
 </header>
 <main>
@@ -191,7 +202,15 @@ const root=document.documentElement;
   if(Math.min(screen.width,screen.height)<700){$('vw').classList.remove('hide');$('vw').textContent=pc?'Вид: ПК':'Вид: телефон'}
   $('vw').onclick=()=>{try{localStorage.setItem('ves-view',pc?'phone':'pc')}catch(e){}location.reload()};
 })();
-$('theme').onclick=()=>{root.dataset.theme=root.dataset.theme==='dark'?'light':'dark'};
+$('theme').onclick=()=>{root.dataset.theme=root.dataset.theme==='dark'?'light':'dark';$('theme').textContent=root.dataset.theme==='dark'?'Светлая тема':'Тёмная тема'};
+(function(){
+  const k=$('kebab'),m=$('menu');
+  const close=()=>{m.classList.add('hide');k.setAttribute('aria-expanded','false')};
+  k.onclick=e=>{e.stopPropagation();const open=m.classList.contains('hide');m.classList.toggle('hide',!open);k.setAttribute('aria-expanded',String(open))};
+  m.addEventListener('click',e=>{if(e.target.closest('button'))close()});
+  document.addEventListener('click',e=>{if(!m.contains(e.target)&&e.target!==k)close()});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+})();
 // load
 $('pick').onclick=()=>$('file').click();
 $('file').onchange=e=>{e.target.files.length&&loadFiles([...e.target.files]);e.target.value=''};
