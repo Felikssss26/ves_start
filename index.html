@@ -104,11 +104,24 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 .menu{position:absolute;right:0;top:calc(100% + 8px);z-index:50;min-width:230px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.3);padding:6px;display:flex;flex-direction:column;gap:2px}
 .menu button{background:none;border:0;color:var(--ink);text-align:left;padding:12px;border-radius:8px;font-weight:600;cursor:pointer;white-space:nowrap}
 .menu button:hover,.menu button:focus-visible{background:var(--accbg)}
+#cbar{display:none!important}
+.hh{margin:6px 2px 12px;font-size:20px}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.ccard{display:flex;flex-direction:column;gap:6px;text-align:left;background:var(--card);color:var(--ink);font:inherit;border:1px solid var(--line);border-left:5px solid var(--acc);border-radius:12px;padding:14px 16px;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.ccard:hover,.ccard:focus-visible{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.18)}
+.cdate{color:var(--acc);font-weight:700;font-size:13px}
+.ctitle{font-weight:800;font-size:17px;line-height:1.25}
+.cplace{color:var(--mute);font-size:13px}
+.cchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.cchips i{font-style:normal;font-size:12px;background:var(--accbg);color:var(--ink);padding:3px 9px;border-radius:999px}
+.cnote{color:var(--mute);font-size:12px}
+.ccard.up{border-style:dashed;border-left-width:1px;align-items:center;justify-content:center;color:var(--mute);min-height:110px;font-weight:600;background:transparent}
 .hide{display:none!important}
 </style>
 </head>
 <body>
 <header>
+  <button class="btn ghost hide" id="back" aria-label="Ко всем соревнованиям">← Соревнования</button>
   <h1 id="title"><b>ВЕСЁЛЫЕ СТАРТЫ</b>: результаты и статистика соревнований<small id="sub">Загрузите файлы Excel: итоги, заявку, стартовый протокол</small></h1>
   <div class="menuwrap">
     <button class="btn ghost kebab" id="kebab" aria-label="Меню" aria-haspopup="true" aria-expanded="false" aria-controls="menu">⋮</button>
@@ -117,13 +130,14 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
       <button id="inst" class="hide" role="menuitem">Установить приложение</button>
       <button id="theme" role="menuitem">Тёмная тема</button>
       <button id="vw" class="hide" role="menuitem" title="Переключить вид: как на компьютере / для телефона">Вид</button>
-      <button id="clr" class="hide" role="menuitem" title="Удалить загруженные данные с этого устройства">Очистить данные</button>
+      <button id="clr" class="hide" role="menuitem" title="Удалить загруженные данные с этого устройства">Удалить загруженные файлы</button>
     </div>
   </div>
   <input type="file" id="file" accept=".xlsx,.xls" multiple class="hide">
 </header>
 <main>
-  <div id="drop"><b>Перетащите сюда файлы Excel</b>Можно загрузить итоговый протокол (в исходном виде), стартовый протокол и техническую заявку (.xls или .xlsx) — вместе или по отдельности. Итоговые протоколы прошлых соревнований (можно несколько файлов) попадут во вкладку «Сравнение».</div>
+  <div id="home"><h2 class="hh">Соревнования</h2><div class="cgrid" id="cgrid"><p class="count">Загрузка…</p></div></div>
+  <div id="drop" class="hide"><b>Перетащите сюда файлы Excel</b>Можно загрузить итоговый протокол (в исходном виде), стартовый протокол и техническую заявку (.xls или .xlsx) — вместе или по отдельности. Итоговые протоколы прошлых соревнований (можно несколько файлов) попадут во вкладку «Сравнение».</div>
   <div id="err" style="color:var(--bad);font-weight:600;margin:8px 2px"></div>
   <div id="app" class="hide">
     <div id="cbar" class="count hide" style="margin:0 0 8px"><label>Показано соревнование: <select id="cs" style="padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);max-width:100%"></select></label></div>
@@ -219,7 +233,6 @@ const drop=$('drop');
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
 document.addEventListener('drop',e=>{e.dataTransfer.files.length&&loadFiles([...e.dataTransfer.files])});
 async function readBook(buf){
-  if(typeof XLSX==="undefined")throw new Error("библиотека чтения Excel ещё не загружена: подключитесь к интернету и перезапустите приложение");
   try{return XLSX.read(buf,{type:'array'})}
   catch(e){
     // Файлы LibreOffice: пересобираем архив и читаем заново
@@ -545,7 +558,7 @@ function renderNorms(){
   $('nb').innerHTML=Object.entries(NORMS['Мальчики']).map(([k,v])=>{const i=k.lastIndexOf(' ');return `<tr><td><b>${esc(k.slice(0,i))}, ${k.slice(i+1)} м</b></td>`+v.map(x=>`<td class="t">${x==null?'—':fS(x)}</td>`).join('')+'</tr>'}).join('');
 }
 renderNorms();
-async function loadFiles(files,silent){
+async function loadFiles(files){
   const errs=[];let res='',go='';
   for(const f of files){
     try{
@@ -577,7 +590,7 @@ async function loadFiles(files,silent){
     showNotes();
     setSub();
     init();saveState();
-    if(go&&!silent)showTab(go);
+    if(go)showTab(go);
   }
 }
 const uniq=k=>[...new Set(rows.map(r=>r[k]).filter(Boolean))];
@@ -709,28 +722,24 @@ $('who').addEventListener('change',()=>{
 $('dx').onclick=()=>$('dlg').close();
 $('dlg').addEventListener('click',e=>{if(e.target===$('dlg'))$('dlg').close()});
 
-// ---- PWA: данные сохраняются на устройстве (IndexedDB), установка, офлайн
-function setSub(){$('sub').textContent=[rows.length?'итоги: '+rows.length+' записей':'',ents.length?'заявка: '+ents.length+' стартов':'',starts.length?'заплывы: '+starts.length+' стартов':''].filter(Boolean).join(' · ')}
+// ---- PWA: каталог соревнований (data/index.json), открытие карточек, свои файлы, установка, офлайн
+const KINDS={itog:'Итоговый протокол',start:'Стартовый протокол',zayavka:'Заявка'};
+let catalog=[],openId=null,opening=false;const PC={},userParsed={};
+const allCat=()=>{const n=Object.keys(userParsed);return n.length?[...catalog,{id:'__user',user:true,title:'Загруженные мной файлы',short:'Мои файлы',place:'хранятся на этом устройстве',
+  date:(Object.values(userParsed).map(p=>p.res&&p.res.meta&&p.res.meta.dt).find(Boolean)||''),start:'0000',files:n.map(f=>({name:f,kind:userParsed[f].res?'itog':userParsed[f].st?'start':'zayavka'}))}]:catalog};
+function setSub(){const c=allCat().find(x=>x.id===openId);$('sub').textContent=c?[c.title,c.date].filter(Boolean).join(' · '):'Выберите соревнование'}
 const idb=()=>new Promise((ok,no)=>{const r=indexedDB.open('ves-start',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
-async function saveState(){
-  try{
-    const db=await idb(),tx=db.transaction('kv','readwrite');
-    tx.objectStore('kv').put({comps:comps.map(c=>({file:c.file,label:c.label,ts:c.ts,rows:c.rows,notes:c.notes})),efiles,sfiles,picked,curFile},'state');
-    await new Promise((ok,no)=>{tx.oncomplete=ok;tx.onerror=()=>no(tx.error)});db.close();
-    $('clr').classList.remove('hide');
-  }catch(e){}
+async function saveUser(){
+  try{const db=await idb(),tx=db.transaction('kv','readwrite');tx.objectStore('kv').put({userParsed},'user');
+    await new Promise((ok,no)=>{tx.oncomplete=ok;tx.onerror=()=>no(tx.error)});db.close()}catch(e){}
 }
-async function restoreState(){
-  try{
-    const db=await idb(),v=await new Promise((ok,no)=>{const r=db.transaction('kv').objectStore('kv').get('state');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});db.close();
-    if(!v)return;
-    comps=v.comps||[];efiles=v.efiles||{};sfiles=v.sfiles||{};picked=!!v.picked;curFile=v.curFile||'';
-    ents=Object.values(efiles).flat();starts=Object.values(sfiles).flat();pickCurrent();
-    if(rows.length||ents.length||starts.length){showNotes();setSub();init();$('clr').classList.remove('hide')}
-  }catch(e){}
+function saveState(){return saveUser()}
+async function restoreUser(){
+  try{const db=await idb(),v=await new Promise((ok,no)=>{const r=db.transaction('kv').objectStore('kv').get('user');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});db.close();
+    if(v&&v.userParsed)Object.assign(userParsed,v.userParsed)}catch(e){}
 }
 $('clr').onclick=()=>{
-  if(!confirm('Удалить загруженные данные с этого устройства?'))return;
+  if(!confirm('Удалить загруженные вами файлы с этого устройства? Соревнования из каталога останутся.'))return;
   const r=indexedDB.deleteDatabase('ves-start');r.onsuccess=r.onerror=r.onblocked=()=>location.reload();
 };
 let installEv=null;
@@ -738,18 +747,108 @@ addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEv=e;$('ins
 addEventListener('appinstalled',()=>$('inst').classList.add('hide'));
 $('inst').onclick=async()=>{if(!installEv)return;installEv.prompt();await installEv.userChoice;installEv=null;$('inst').classList.add('hide')};
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
-// ---- протоколы, которые лежат в папке data рядом с программой (список — в data/index.json)
-async function loadBundled(){
-  try{
-    const r=await fetch('data/index.json',{cache:'no-cache'});if(!r.ok)return;
-    const list=await r.json(),files=[];
-    for(const name of list){
-      try{const rr=await fetch('data/'+encodeURIComponent(name),{cache:'no-cache'});if(rr.ok)files.push(new File([await rr.blob()],name))}catch(e){}
-    }
-    if(files.length)await loadFiles(files,true);
-  }catch(e){}
+
+// разбор одного файла: итоги, стартовый протокол или заявка
+async function parseFile(f){
+  const wb=await readBook(await f.arrayBuffer()),mx=n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:null,raw:true});
+  if(wb.Sheets['Результаты']){
+    const rr=XLSX.utils.sheet_to_json(wb.Sheets['Результаты'],{defval:null,raw:true}).map(o=>{const r={};for(const k in KEYS)r[KEYS[k]]=o[k]??null;r.pl=typeof r.pl==='number'?r.pl:null;r.team=r.team||r.club||r.city||'—';return r}).filter(r=>r.fio);
+    if(!rr.length)throw new Error('лист «Результаты» пуст');
+    return {name:f.name,res:{rows:rr,notes:[],meta:null}};
+  }
+  const st=wb.SheetNames.flatMap(n=>parseStartMatrix(mx(n))),ent=parseEntries(wb,f.name);
+  if(st.length||ent.length)return {name:f.name,st,ent};
+  const pr=wb.SheetNames.map(n=>parseResultsMatrix(mx(n))).find(x=>x&&x.rows.length);
+  if(!pr){
+    if(wb.SheetNames.some(n=>mx(n).filter(r=>r&&/^\s*\d+\s*заплыв/i.test(String(r[1]??''))).length>=3))throw new Error('в файле только заплывы и дорожки (лист «хроном»), без времени и мест — это не итоговый протокол');
+    throw new Error('не удалось распознать: нужен итоговый или стартовый протокол либо техническая заявка');
+  }
+  return {name:f.name,res:{rows:pr.rows,notes:pr.notes,meta:pr.meta}};
 }
-restoreState().finally(loadBundled);
+async function getParsed(name,user){
+  if(user)return userParsed[name];
+  if(PC[name])return PC[name];
+  const r=await fetch('data/'+encodeURIComponent(name),{cache:'no-cache'});
+  if(!r.ok)throw new Error('файл недоступен');
+  return PC[name]=await parseFile(new File([await r.blob()],name));
+}
+async function fetchCatalog(){
+  try{const r=await fetch('data/index.json',{cache:'no-cache'});if(!r.ok)return [];
+    return (await r.json()).filter(c=>c&&c.id&&Array.isArray(c.files)).map(c=>({...c,files:c.files.map(f=>typeof f==='string'?{name:f,kind:'itog'}:f)}))}
+  catch(e){return []}
+}
+
+// главная: карточки соревнований
+const ICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="vertical-align:-2px;margin-right:4px"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>';
+function renderHome(){
+  const list=allCat().slice().sort((a,b)=>(b.start||'').localeCompare(a.start||''));
+  $('cgrid').innerHTML=list.map(c=>{
+    const kinds=[...new Set(c.files.map(f=>f.kind))].filter(k=>KINDS[k]).sort((x,y)=>Object.keys(KINDS).indexOf(x)-Object.keys(KINDS).indexOf(y));
+    return `<button class="ccard" data-open="${esc(c.id)}"><span class="cdate">${esc(c.date||'')}</span><span class="ctitle">${esc(c.title)}</span>`+
+      `<span class="cplace">${ICO}${esc(c.place||'')}</span><span class="cchips">${kinds.map(k=>`<i>${esc(KINDS[k])}</i>`).join('')}</span>${c.note?`<span class="cnote">${esc(c.note)}</span>`:''}</button>`}).join('')+
+    '<button class="ccard up" data-upload="1">+ Открыть свои файлы Excel</button>';
+  $('clr').classList.toggle('hide',!Object.keys(userParsed).length);
+}
+function showApp(){$('home').classList.add('hide');$('drop').classList.add('hide');$('app').classList.remove('hide');$('back').classList.remove('hide')}
+function showHome(){
+  openId=null;$('app').classList.add('hide');$('home').classList.remove('hide');$('back').classList.add('hide');
+  if($('dlg').open)$('dlg').close();setSub();renderHome();window.scrollTo(0,0);
+}
+function updateTabs(){
+  const has={res:rows.length>0,win:rows.length>0,med:rows.length>0,ent:ents.length>0,sta:starts.length>0,cmp:comps.length>0,nrm:true};
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('hide',!has[b.dataset.t]));
+}
+// открыть соревнование: подтягиваются его файлы и (для сравнения) итоги остальных соревнований
+async function openCompetition(id,push=true){
+  const c=allCat().find(x=>x.id===id);if(!c||opening)return;
+  opening=true;$('sub').textContent='Загрузка материалов…';$('err').textContent='';
+  try{
+    rows=[];ents=[];starts=[];efiles={};sfiles={};comps=[];resNotes=[];picked=false;curFile='';
+    const errs=[],mine=[];
+    for(const f of c.files){
+      try{const p=await getParsed(f.name,c.user);if(!p)continue;
+        if(p.res){addComp(p.name,p.res.rows,p.res.notes,p.res.meta);mine.push(p.name)}
+        if(p.st&&p.st.length)sfiles[p.name]=p.st;
+        if(p.ent&&p.ent.length)efiles[p.name]=p.ent;
+      }catch(x){errs.push(f.name+' — '+x.message)}
+    }
+    for(const o of allCat()){
+      if(o.id===id)continue;
+      for(const f of o.files){if(!o.user&&f.kind!=='itog')continue;
+        try{const p=await getParsed(f.name,o.user);if(p&&p.res)addComp(p.name,p.res.rows,p.res.notes,p.res.meta)}catch(x){}}
+    }
+    for(const k of comps){const o=allCat().find(z=>z.files.some(f=>f.name===k.file));if(o&&!o.user)k.label=[o.short||o.title,o.date].filter(Boolean).join(', ')}
+    ents=Object.values(efiles).flat();starts=Object.values(sfiles).flat();
+    if(mine.length){curFile=comps.filter(k=>mine.includes(k.file)).sort((x,y)=>y.ts-x.ts)[0].file;picked=true}
+    pickCurrent();
+    if(!mine.length){rows=[];resNotes=[];curFile=''}
+    openId=id;
+    $('err').textContent=errs.length?'Не удалось прочитать: '+errs.join('; '):'';
+    showApp();showNotes();setSub();init();updateTabs();
+    showTab(rows.length?'res':starts.length?'sta':ents.length?'ent':'cmp');
+    if(push)history.pushState({c:id},'','');
+    window.scrollTo(0,0);
+  }finally{opening=false}
+}
+// загрузка своих файлов вручную: они собираются в отдельную карточку и сохраняются на устройстве
+async function loadFiles(files){
+  $('err').textContent='';const errs=[];
+  for(const f of files){try{userParsed[f.name]=await parseFile(f)}catch(x){errs.push(f.name+' — '+x.message)}}
+  if(Object.keys(userParsed).length){await saveUser();await openCompetition('__user')}
+  if(errs.length)$('err').textContent='Не удалось прочитать: '+errs.join('; ');
+}
+document.addEventListener('click',e=>{
+  const o=e.target.closest('[data-open]');if(o)openCompetition(o.dataset.open);
+  if(e.target.closest('[data-upload]'))$('file').click();
+});
+$('back').onclick=()=>{if(history.state&&history.state.c)history.back();else showHome()};
+addEventListener('popstate',()=>{if(openId)showHome()});
+(async()=>{
+  await restoreUser();
+  catalog=await fetchCatalog();
+  renderHome();setSub();
+  if(!allCat().length){$('home').classList.add('hide');$('drop').classList.remove('hide')}
+})();
 </script>
 </body>
 </html>
