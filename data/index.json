@@ -1,6 +1,39 @@
 [
- "pervenstvo_pmr_2026_itog.xlsx",
- "pervenstvo_pmr_2026_start.xlsx",
- "pervenstvo_pmr_2026_zayavka.xls",
- "mercisor_2026_itog.xlsx"
+ {
+  "id": "pervenstvo-pmr-2026",
+  "title": "Открытое Первенство ПМР",
+  "short": "Первенство ПМР",
+  "place": "г. Тирасполь",
+  "date": "25–26.09.2026",
+  "start": "2026-09-25",
+  "files": [
+   {
+    "name": "pervenstvo_pmr_2026_itog.xlsx",
+    "kind": "itog"
+   },
+   {
+    "name": "pervenstvo_pmr_2026_start.xlsx",
+    "kind": "start"
+   },
+   {
+    "name": "pervenstvo_pmr_2026_zayavka.xls",
+    "kind": "zayavka"
+   }
+  ]
+ },
+ {
+  "id": "mercishor-2026",
+  "title": "Открытое Первенство школы плавания «Мэрцишор»",
+  "short": "Мэрцишор",
+  "place": "г. Тирасполь",
+  "date": "27–28.02.2026",
+  "start": "2026-02-27",
+  "note": "В итоговом протоколе только первый день (27.02).",
+  "files": [
+   {
+    "name": "mercisor_2026_itog.xlsx",
+    "kind": "itog"
+   }
+  ]
+ }
 ]
