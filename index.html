@@ -115,6 +115,9 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 .cchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 .cchips i{font-style:normal;font-size:12px;background:var(--accbg);color:var(--ink);padding:3px 9px;border-radius:999px}
 .cnote{color:var(--mute);font-size:12px}
+.ccard.upc{cursor:default}
+.ccard.upc:hover{transform:none;box-shadow:none}
+.badge{font-size:11px;background:var(--accbg);color:var(--acc);padding:2px 8px;border-radius:999px;margin-left:8px;font-weight:700}
 .ccard.up{border-style:dashed;border-left-width:1px;align-items:center;justify-content:center;color:var(--mute);min-height:110px;font-weight:600;background:transparent}
 .hide{display:none!important}
 </style>
@@ -817,6 +820,11 @@ function renderHome(){
   const list=allCat().slice().sort((a,b)=>(b.start||'').localeCompare(a.start||''));
   $('cgrid').innerHTML=list.map(c=>{
     const kinds=[...new Set(c.files.flatMap(f=>f.kinds||[f.kind]))].filter(k=>KINDS[k]).sort((x,y)=>Object.keys(KINDS).indexOf(x)-Object.keys(KINDS).indexOf(y));
+    if(c.upcoming||!c.files.length){      // предстоящее соревнование: материалов ещё нет, карточка не открывается
+      const d=c.start?Math.round((new Date(c.start+'T00:00:00')-new Date(new Date().toDateString()))/864e5):null;
+      const left=d==null||d<0?'':d===0?' Сегодня.':d===1?' Завтра.':' Через '+d+' дн.';
+      return `<div class="ccard upc"><span class="cdate">${esc(c.date||'')}<b class="badge">Предстоящее</b></span><span class="ctitle">${esc(c.title)}</span><span class="cplace">${ICO}${esc(c.place||'')}</span><span class="cnote">Материалы появятся после соревнования.${left}</span></div>`;
+    }
     return `<button class="ccard" data-open="${esc(c.id)}"><span class="cdate">${esc(c.date||'')}</span><span class="ctitle">${esc(c.title)}</span>`+
       `<span class="cplace">${ICO}${esc(c.place||'')}</span><span class="cchips">${kinds.map(k=>`<i>${esc(KINDS[k])}</i>`).join('')}</span>${c.note?`<span class="cnote">${esc(c.note)}</span>`:''}</button>`}).join('')+
     '<button class="ccard up" data-upload="1">+ Открыть свои файлы Excel</button>';
@@ -833,7 +841,7 @@ function updateTabs(){
 }
 // открыть соревнование: подтягиваются его файлы и (для сравнения) итоги остальных соревнований
 async function openCompetition(id,push=true){
-  const c=allCat().find(x=>x.id===id);if(!c||opening)return;
+  const c=allCat().find(x=>x.id===id);if(!c||opening||c.upcoming||!c.files.length)return;
   opening=true;$('sub').textContent='Загрузка материалов…';$('err').textContent='';
   try{
     rows=[];ents=[];starts=[];efiles={};sfiles={};comps=[];resNotes=[];picked=false;curFile='';
