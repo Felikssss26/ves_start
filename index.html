@@ -313,16 +313,16 @@ function parseStartMatrix(a){
   if(C.name<0||C.yob<0)return [];
   const isLbl=x=>/^(№.*|в\.?\s?г\.?|фио|г\.?\s?р\.?|школ.*|город.*|разряд|результат|тренер|заявоч.*|время)$/i.test(x.trim());
   const out=[],seen=new Set(),evs={};
-  let day=1,date='',dist='',sex='',grp='',heat=null;
+  let day=1,date='',dist='',sex='',grp='',heat=null,used=false;
   for(const r of a){
     if(!r)continue;
-    const hn=heatHdr(r);if(hn!=null){heat=hn;continue}
+    const hn=heatHdr(r);if(hn!=null){heat=hn;used=false;continue}
     const nv=r[C.name],name=typeof nv==='string'?nv.replace(/\s+/g,' ').trim():'';
     const ym=String(r[C.yob]??'').match(/\d{4}/),yob=ym?+ym[0]:null;
     if(name&&yob&&dist){
       const ek=day+'|'+dist+'|'+sex;if(!(ek in evs))evs[ek]=Object.keys(evs).length+1;
       const key=nk(name),dk=[ek,key,heat].join('|');
-      if(heat==null&&seen.has(dk))continue;seen.add(dk);
+      if(heat==null&&seen.has(dk))continue;seen.add(dk);used=true;
       const school=C.school>=0&&r[C.school]?nClub(r[C.school]):'',city=C.city>=0&&r[C.city]?String(r[C.city]).trim():'';
       const gv=C.grp>=0&&typeof r[C.grp]==='number'?r[C.grp]+' в.г.':'';
       out.push({day,date,dist,ev:evs[ek],sex,heat,lane:typeof r[0]==='number'?r[0]:null,grp:gv||grpOf(yob),gd:!gv,
@@ -333,11 +333,11 @@ function parseStartMatrix(a){
     const t=[r[1],r[2],r[3],r[4]].find(x=>typeof x==='string'&&x.trim()&&!isLbl(x));
     if(!t)continue;
     const tl=t.trim().toLowerCase();
-    if(/день/.test(tl)){const m=tl.match(/(\d)\s*день/);if(m)day=+m[1];date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0];dist=sex=grp='';heat=null;continue}
+    if(/день/.test(tl)){const m=tl.match(/(\d)\s*день/);if(m)day=+m[1];date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0];dist=sex=grp='';if(used)heat=null;continue}
     if(/^\d{2}-\d{2}|^стартовый|^итоговый|^гл\.|^представитель|^директор/.test(tl))continue;
     if(/^\d\s*в\.?\s*г/.test(tl)){grp=tl[0]+' в.г.';continue}
-    if(tl==='девочки'||tl==='мальчики'){sex=tl==='девочки'?'Девочки':'Мальчики';heat=null;continue}
-    dist=nDist(t);sex=grp='';heat=null;
+    if(tl==='девочки'||tl==='мальчики'){sex=tl==='девочки'?'Девочки':'Мальчики';if(used)heat=null;continue}
+    dist=nDist(t);sex=grp='';if(used)heat=null;
   }
   return out;
 }
