@@ -8,16 +8,12 @@
   "start": "2026-09-25",
   "files": [
    {
-    "name": "pervenstvo_pmr_2026_itog.xlsx",
-    "kind": "itog"
-   },
-   {
-    "name": "pervenstvo_pmr_2026_start.xlsx",
-    "kind": "start"
-   },
-   {
-    "name": "pervenstvo_pmr_2026_zayavka.xls",
-    "kind": "zayavka"
+    "name": "pervenstvo_pmr_2026.xlsx",
+    "kinds": [
+     "itog",
+     "start",
+     "zayavka"
+    ]
    }
   ]
  },
