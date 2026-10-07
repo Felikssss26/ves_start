@@ -1,6 +1,6 @@
 // Весёлые старты — офлайн-кэш. При изменении файлов приложения увеличьте номер версии V.
 const V='ves-v4';
-const SHELL=["./", "./index.html", "./manifest.webmanifest", "./lib/jszip.min.js", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/maskable-512.png", "./icons/apple-touch-icon.png", "./icons/favicon.png", "./data/index.json", "./data/pervenstvo_pmr_2026_itog.xlsx", "./data/pervenstvo_pmr_2026_start.xlsx", "./data/pervenstvo_pmr_2026_zayavka.xls", "./data/mercisor_2026_itog.xlsx"];
+const SHELL=["./", "./index.html", "./manifest.webmanifest", "./lib/jszip.min.js", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/maskable-512.png", "./icons/apple-touch-icon.png", "./icons/favicon.png", "./data/index.json", "./data/pervenstvo_pmr_2026_itog.xlsx", "./data/pervenstvo_pmr_2026_start.xlsx", "./data/pervenstvo_pmr_2026_zayavka.xls", "./data/mercishor_2026.xlsx"];
 const CDN=['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{
   const c=await caches.open(V);

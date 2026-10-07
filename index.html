@@ -244,7 +244,7 @@ async function readBook(buf){
 const nk=s=>String(s||'').toLowerCase().replace(/ё/g,'е').replace(/\s+/g,' ').trim();
 const dkey=s=>String(s).toLowerCase().replace(/\s+/g,' ').trim();
 const grpOf=y=>!y?'':y<=2012?'1 в.г.':y<=2014?'2 в.г.':'3 в.г.';
-const tSec=s=>{const m=String(s??'').trim().match(/^(\d+)[,.:](\d\d)[,.](\d\d)$/);return m?+m[1]*60+ +m[2]+ +m[3]/100:null};
+const tSec=s=>{const m=String(s??'').trim().match(/^(\d+)[,.:](\d\d)[,.](\d{1,2})$/);return m?+m[1]*60+ +m[2]+ +m[3]*(m[3].length===1?10:1)/100:null};
 const fS=v=>{if(v==null||isNaN(v))return '';const s=Math.round(v*100)/100,m=Math.floor(s/60),r=(s-m*60).toFixed(2).replace('.',',');return m+':'+(r.length<5?'0'+r:r)};
 const resSec=r=>typeof r.res==='number'?r.res*86400:null;
 const STY={'в/с':'вольный стиль','к/п':'комплексное плавание','брасс':'брасс','батт':'баттерфляй','н/с':'на спине'};
@@ -257,20 +257,38 @@ function parseMatrix(a,fname){
   const w=team.split(' ')[0];if(/^[A-ZА-ЯЁ0-9\-]{3,}$/.test(w))team=w;
   team=team||fname.replace(/\.[^.]+$/,'');
   const hd=a[h]||[],st=a[h+1]||[],mt=a[h+2]||[],cols=[];
-  let day=1,cc=-1;
+  let day=1,cc=-1,yc=-1,rc=-1,start=h+3;
   for(let c=0;c<Math.max(hd.length,st.length,mt.length);c++){
-    if(typeof hd[c]==='string'){if(/тренер/i.test(hd[c]))cc=c;else if(c>=4)day=/[IІ]{2}|2|вт/i.test(hd[c])?2:1}
+    if(typeof hd[c]==='string'){
+      if(/тренер/i.test(hd[c]))cc=c;
+      else{
+        if(yc<0&&/год|г\.?\s?р/i.test(hd[c]))yc=c;
+        if(rc<0&&/^разряд/i.test(hd[c].trim()))rc=c;
+        if(c>=4)day=/[IІ]{2}|2|вт/i.test(hd[c])?2:1;
+      }
+    }
     const m=typeof mt[c]==='number'?mt[c]:(/^\s*\d+\s*$/.test(mt[c])?+mt[c]:0),sty=String(st[c]||'').toLowerCase().trim();
     if(c>=4&&m>0&&STY[sty])cols.push({c,day,dist:m+' м '+STY[sty]});
   }
-  const out=[];
-  for(let i=h+3;i<a.length;i++){
+  if(!cols.length){                                    // подписи в одной строке: «50 в/с», «100 к/п», «50 бат.»
+    let d2=1;start=h+2;
+    for(let c=0;c<st.length;c++){
+      if(typeof hd[c]==='string'&&c>=4&&!/тренер|разряд/i.test(hd[c]))d2=/[IІ]{2}|2|вт/i.test(hd[c])?2:1;
+      const m=typeof st[c]==='string'&&st[c].trim().toLowerCase().match(/^(\d+)\s*(в\/с|брасс|к\/п|н\/с|бат+\.?)$/);
+      if(m)cols.push({c,day:d2,dist:+m[1]+' м '+STY[m[2].startsWith('бат')?'батт':m[2]]});
+    }
+  }
+  if(!cols.length)return [];
+  const dc=new Set(cols.map(x=>x.c)),yi=yc>=0?yc:2,ri=rc>=0?rc:3,out=[];
+  const txt=(r,i)=>i>=0&&!dc.has(i)&&typeof r[i]==='string'&&r[i].trim()&&tSec(r[i])==null?r[i].replace(/\s+/g,' ').trim():null;
+  for(let i=start;i<a.length;i++){
     const r=a[i]||[],fio=r[1];
     if(typeof fio!=='string'||!fio.trim())continue;
-    const yob=parseInt(r[2])||null,rank=r[3]?String(r[3]).trim().replace(/юн$/,'юн.'):'';
-    const coach=cc>=0&&r[cc]?String(r[cc]).trim():'';
+    const yob=parseInt(r[yi])||null,rank=nRank(r[ri])||'',coach=cc>=0&&r[cc]?String(r[cc]).trim():'';
+    const own=rc>=0?nClub(txt(r,rc+1)):null,city=rc>=0?txt(r,rc+2):null;     // клуб и город — в колонках справа от разряда
+    const gv=!dc.has(yi+1)&&typeof r[yi+1]==='number'&&r[yi+1]>=1&&r[yi+1]<=9?r[yi+1]:null;
     for(const c of cols){const v=r[c.c];if(v==null||String(v).trim()==='')continue;
-      out.push({team,fio:fio.replace(/\s+/g,' ').trim(),key:nk(fio),yob,grp:grpOf(yob),rank,coach,day:c.day,dist:c.dist,ord:c.c,t:tSec(v),raw:String(v).trim()})}
+      out.push({team:own||team,city:city||'',fio:fio.replace(/\s+/g,' ').trim(),key:nk(fio),yob,grp:gv?gv+' в.г.':grpOf(yob),gd:!gv,rank,coach,day:c.day,dist:c.dist,ord:c.c,t:tSec(v),raw:String(v).trim()})}
   }
   return out;
 }
@@ -280,30 +298,43 @@ function parseEntries(wb,fname){
 
 // ---- разбор стартового протокола
 const nDist=d=>String(d).toLowerCase().replace(/\s+/g,' ').trim().replace('комлексное','комплексное').replace('к/п','комплексное плавание').replace('в/с','вольный стиль').replace('н/с','на спине').replace(/^(\d+) (?!м )/,'$1 м ');
-const nr=x=>x==null?'':String(x).trim().replace(/юн$/i,'юн.');
+const nr=x=>x==null?'':(nRank(x)||'');
 function parseStartMatrix(a){
-  if(!a.some(r=>r&&/^в\.?\s?г/i.test(String(r[1]||'').trim())&&/^фио/i.test(String(r[2]||'').trim())))return [];
+  const hr=a.find(r=>r&&r.some(c=>typeof c==='string'&&/^фио$/i.test(c.trim())));
+  if(!hr)return [];
+  const heatHdr=r=>{
+    const b=String(r[1]??''),c=String(r[2]??''),m=b.match(/^\s*(\d+)\s*заплыв/i)||c.match(/^\s*(\d+)\s*заплыв/i);
+    if(m)return +m[1];
+    return /^\s*заплыв/i.test(c)&&typeof r[1]==='number'?r[1]:null;
+  };
+  if(a.filter(r=>r&&heatHdr(r)!=null).length<3)return [];
+  const h=hr.map(c=>typeof c==='string'?c.trim().toLowerCase():''),at=re=>h.findIndex(x=>re.test(x));
+  const C={name:at(/^фио$/),yob:at(/^г\.?\s?р/),grp:at(/^в\.?\s?г/),rank:at(/^разряд/),school:at(/школ/),city:at(/город/),seed:at(/результат|заявоч|время/),coach:at(/тренер/)};
+  if(C.name<0||C.yob<0)return [];
+  const isLbl=x=>/^(№.*|в\.?\s?г\.?|фио|г\.?\s?р\.?|школ.*|город.*|разряд|результат|тренер|заявоч.*|время)$/i.test(x.trim());
   const out=[],seen=new Set(),evs={};
   let day=1,date='',dist='',sex='',grp='',heat=null;
   for(const r of a){
     if(!r)continue;
-    const name=typeof r[2]==='string'?r[2].replace(/\s+/g,' ').trim():'';
-    const ym=String(r[3]??'').match(/\d{4}/),yob=ym?+ym[0]:null;
+    const hn=heatHdr(r);if(hn!=null){heat=hn;continue}
+    const nv=r[C.name],name=typeof nv==='string'?nv.replace(/\s+/g,' ').trim():'';
+    const ym=String(r[C.yob]??'').match(/\d{4}/),yob=ym?+ym[0]:null;
     if(name&&yob&&dist){
       const ek=day+'|'+dist+'|'+sex;if(!(ek in evs))evs[ek]=Object.keys(evs).length+1;
       const key=nk(name),dk=[ek,key,heat].join('|');
       if(heat==null&&seen.has(dk))continue;seen.add(dk);
-      const school=r[5]?String(r[5]).replace(/\s+/g,' ').trim().replace('"шериф"','"Шериф"'):'',city=r[6]?String(r[6]).trim():'';
-      out.push({day,date,dist,ev:evs[ek],sex,heat,lane:typeof r[0]==='number'?r[0]:null,grp:typeof r[1]==='number'?r[1]+' в.г.':grpOf(yob),
-        fio:name,key,yob,rank:nr(r[4]),school,city,team:school||(city?city+' (школа не указана)':'—'),seed:tSec(r[7]),coach:r[8]?String(r[8]).replace(/\s+/g,' ').trim():''});
+      const school=C.school>=0&&r[C.school]?nClub(r[C.school]):'',city=C.city>=0&&r[C.city]?String(r[C.city]).trim():'';
+      const gv=C.grp>=0&&typeof r[C.grp]==='number'?r[C.grp]+' в.г.':'';
+      out.push({day,date,dist,ev:evs[ek],sex,heat,lane:typeof r[0]==='number'?r[0]:null,grp:gv||grpOf(yob),gd:!gv,
+        fio:name,key,yob,rank:C.rank>=0?nr(r[C.rank]):'',school,city,team:school||(city?city+' (школа не указана)':'—'),
+        seed:C.seed>=0?tSec(r[C.seed]):null,coach:C.coach>=0&&r[C.coach]?String(r[C.coach]).replace(/\s+/g,' ').trim():''});
       continue;
     }
-    const t=[r[2],r[3],r[4]].find(x=>typeof x==='string'&&x.trim());
+    const t=[r[1],r[2],r[3],r[4]].find(x=>typeof x==='string'&&x.trim()&&!isLbl(x));
     if(!t)continue;
     const tl=t.trim().toLowerCase();
-    if(/^заплыв/.test(tl)&&typeof r[1]==='number'){heat=r[1];continue}
     if(/день/.test(tl)){const m=tl.match(/(\d)\s*день/);if(m)day=+m[1];date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0];dist=sex=grp='';heat=null;continue}
-    if(/^фио/.test(tl)||/^\d{2}-\d{2}|^стартовый|^гл\.|^представитель|^директор/.test(tl))continue;
+    if(/^\d{2}-\d{2}|^стартовый|^итоговый|^гл\.|^представитель|^директор/.test(tl))continue;
     if(/^\d\s*в\.?\s*г/.test(tl)){grp=tl[0]+' в.г.';continue}
     if(tl==='девочки'||tl==='мальчики'){sex=tl==='девочки'?'Девочки':'Мальчики';heat=null;continue}
     dist=nDist(t);sex=grp='';heat=null;
@@ -312,8 +343,8 @@ function parseStartMatrix(a){
 }
 
 // ---- разбор итогового протокола в исходном виде
-const RANKS={'1юн':'1юн.','1юн.':'1юн.','2юн':'2юн.','2юн.':'2юн.','3юн':'3юн.','бр':'б/р','б/р':'б/р','мс':'МС','кмс':'КМС','мсмк':'МСМК','2взр':'2 взр.','3взр':'3 взр.','1взр':'1 взр.','1':'1','2':'2','3':'3'};
-const nRank=v=>{if(v==null||String(v).trim()==='')return null;const t=String(v).trim();return RANKS[t.toLowerCase().replace(/\s+/g,'').replace(/[iі]/g,'1')]||t};
+const RANKS={'1юнош':'1юн.','2юнош':'2юн.','3юнош':'3юн.','1взрос':'1 взр.','2взрос':'2 взр.','3взрос':'3 взр.','1вр':'1 взр.','2вр':'2 взр.','3вр':'3 взр.','1юн':'1юн.','1юн.':'1юн.','2юн':'2юн.','2юн.':'2юн.','3юн':'3юн.','бр':'б/р','б/р':'б/р','мс':'МС','кмс':'КМС','мсмк':'МСМК','2взр':'2 взр.','3взр':'3 взр.','1взр':'1 взр.','1':'1','2':'2','3':'3'};
+const nRank=v=>{if(v==null||String(v).trim()==='')return null;const t=String(v).trim();if(/^\d{4}$/.test(t))return null;return RANKS[t.toLowerCase().replace(/\s+/g,'').replace(/^iii/,'3').replace(/^ii/,'2').replace(/^[iі]/,'1')]||t};
 const nClub=s=>{
   if(!s)return s;
   const t=String(s).replace(/\s+/g,' ').trim(),k=t.toLowerCase().replace(/["«»']/g,'').replace(/^ск\s+/,'').trim(),m=k.match(/^ss[\s-]*(\d+)$/);
@@ -558,6 +589,22 @@ function renderNorms(){
   $('nb').innerHTML=Object.entries(NORMS['Мальчики']).map(([k,v])=>{const i=k.lastIndexOf(' ');return `<tr><td><b>${esc(k.slice(0,i))}, ${k.slice(i+1)} м</b></td>`+v.map(x=>`<td class="t">${x==null?'—':fS(x)}</td>`).join('')+'</tr>'}).join('');
 }
 renderNorms();
+function parseWorkbook(wb,fname){
+  const mx=n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:null,raw:true}),st=[],ent=[],rr=[],notes=[];let meta=null;
+  for(const n of wb.SheetNames){
+    const a=mx(n);
+    const en=parseMatrix(a,fname);st.push(...parseStartMatrix(a));ent.push(...en);
+    const pr=en.length?null:parseResultsMatrix(a);      // лист заявки не принимаем за итоги (в нём тоже есть времена)
+    if(pr&&pr.rows.length){rr.push(...pr.rows);notes.push(...pr.notes);meta=meta||pr.meta}
+  }
+  if(!st.length&&!ent.length&&!rr.length)throw new Error('не удалось распознать: нужен итоговый или стартовый протокол либо техническая заявка');
+  if(rr.length){      // возрастные группы по году рождения берём из итогов этого же соревнования
+    const ym=new Map();rr.forEach(x=>{if(x.grp&&x.yob&&x.pl!=null){const m=ym.get(x.yob)||ym.set(x.yob,new Map()).get(x.yob);m.set(x.grp,(m.get(x.grp)||0)+1)}});
+    const g=y=>{const m=ym.get(y);return m?[...m].sort((p,q)=>q[1]-p[1])[0][0]:null};
+    [...st,...ent].forEach(x=>{if(x.gd){const v=g(x.yob);if(v)x.grp=v}});
+  }
+  return {rows:rr,notes,meta,st,ent};
+}
 async function loadFiles(files){
   const errs=[];let res='',go='';
   for(const f of files){
@@ -569,18 +616,10 @@ async function loadFiles(files){
         if(!rr.length)throw new Error('лист «Результаты» пуст');
         addComp(f.name,rr,[],null);res=f.name;
       }else{
-        const st=wb.SheetNames.flatMap(n=>parseStartMatrix(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:null,raw:true}))),e=parseEntries(wb,f.name);
-        if(st.length){sfiles[f.name]=st;go='sta'}
-        if(e.length){efiles[f.name]=e;go='ent'}
-        if(!st.length&&!e.length){
-          const pr=wb.SheetNames.map(n=>parseResultsMatrix(XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:null,raw:true}))).find(x=>x&&x.rows.length);
-          if(!pr){
-            const mx=wb.SheetNames.map(n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:null,raw:true}));
-            if(mx.some(a=>a.filter(r=>r&&/^\s*\d+\s*заплыв/i.test(String(r[1]??''))).length>=3))throw new Error('в файле только заплывы и дорожки (лист «хроном»), без времени и мест — это не итоговый протокол. Загрузите файл, где есть столбец «результат»');
-            throw new Error('не удалось распознать: нужен итоговый или стартовый протокол либо техническая заявка');
-          }
-          addComp(f.name,pr.rows,pr.notes,pr.meta);res=f.name;
-        }
+        const p=parseWorkbook(wb,f.name);
+        if(p.st.length){sfiles[f.name]=p.st;go='sta'}
+        if(p.ent.length){efiles[f.name]=p.ent;go='ent'}
+        if(p.rows.length){addComp(f.name,p.rows,p.notes,p.meta);res=f.name}
       }
     }catch(x){errs.push(f.name+' — '+x.message)}
   }
@@ -726,7 +765,7 @@ $('dlg').addEventListener('click',e=>{if(e.target===$('dlg'))$('dlg').close()});
 const KINDS={itog:'Итоговый протокол',start:'Стартовый протокол',zayavka:'Заявка'};
 let catalog=[],openId=null,opening=false;const PC={},userParsed={};
 const allCat=()=>{const n=Object.keys(userParsed);return n.length?[...catalog,{id:'__user',user:true,title:'Загруженные мной файлы',short:'Мои файлы',place:'хранятся на этом устройстве',
-  date:(Object.values(userParsed).map(p=>p.res&&p.res.meta&&p.res.meta.dt).find(Boolean)||''),start:'0000',files:n.map(f=>({name:f,kind:userParsed[f].res?'itog':userParsed[f].st?'start':'zayavka'}))}]:catalog};
+  date:(Object.values(userParsed).map(p=>p.res&&p.res.meta&&p.res.meta.dt).find(Boolean)||''),start:'0000',files:n.map(f=>{const p=userParsed[f];return {name:f,kinds:[p.res&&'itog',p.st&&p.st.length&&'start',p.ent&&p.ent.length&&'zayavka'].filter(Boolean)}})}]:catalog};
 function setSub(){const c=allCat().find(x=>x.id===openId);$('sub').textContent=c?[c.title,c.date].filter(Boolean).join(' · '):'Выберите соревнование'}
 const idb=()=>new Promise((ok,no)=>{const r=indexedDB.open('ves-start',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
 async function saveUser(){
@@ -756,14 +795,8 @@ async function parseFile(f){
     if(!rr.length)throw new Error('лист «Результаты» пуст');
     return {name:f.name,res:{rows:rr,notes:[],meta:null}};
   }
-  const st=wb.SheetNames.flatMap(n=>parseStartMatrix(mx(n))),ent=parseEntries(wb,f.name);
-  if(st.length||ent.length)return {name:f.name,st,ent};
-  const pr=wb.SheetNames.map(n=>parseResultsMatrix(mx(n))).find(x=>x&&x.rows.length);
-  if(!pr){
-    if(wb.SheetNames.some(n=>mx(n).filter(r=>r&&/^\s*\d+\s*заплыв/i.test(String(r[1]??''))).length>=3))throw new Error('в файле только заплывы и дорожки (лист «хроном»), без времени и мест — это не итоговый протокол');
-    throw new Error('не удалось распознать: нужен итоговый или стартовый протокол либо техническая заявка');
-  }
-  return {name:f.name,res:{rows:pr.rows,notes:pr.notes,meta:pr.meta}};
+  const p=parseWorkbook(wb,f.name);
+  return {name:f.name,res:p.rows.length?{rows:p.rows,notes:p.notes,meta:p.meta}:undefined,st:p.st,ent:p.ent};
 }
 async function getParsed(name,user){
   if(user)return userParsed[name];
@@ -783,7 +816,7 @@ const ICO='<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" a
 function renderHome(){
   const list=allCat().slice().sort((a,b)=>(b.start||'').localeCompare(a.start||''));
   $('cgrid').innerHTML=list.map(c=>{
-    const kinds=[...new Set(c.files.map(f=>f.kind))].filter(k=>KINDS[k]).sort((x,y)=>Object.keys(KINDS).indexOf(x)-Object.keys(KINDS).indexOf(y));
+    const kinds=[...new Set(c.files.flatMap(f=>f.kinds||[f.kind]))].filter(k=>KINDS[k]).sort((x,y)=>Object.keys(KINDS).indexOf(x)-Object.keys(KINDS).indexOf(y));
     return `<button class="ccard" data-open="${esc(c.id)}"><span class="cdate">${esc(c.date||'')}</span><span class="ctitle">${esc(c.title)}</span>`+
       `<span class="cplace">${ICO}${esc(c.place||'')}</span><span class="cchips">${kinds.map(k=>`<i>${esc(KINDS[k])}</i>`).join('')}</span>${c.note?`<span class="cnote">${esc(c.note)}</span>`:''}</button>`}).join('')+
     '<button class="ccard up" data-upload="1">+ Открыть свои файлы Excel</button>';
@@ -814,7 +847,7 @@ async function openCompetition(id,push=true){
     }
     for(const o of allCat()){
       if(o.id===id)continue;
-      for(const f of o.files){if(!o.user&&f.kind!=='itog')continue;
+      for(const f of o.files){if(!o.user&&!(f.kinds||[f.kind]).includes('itog'))continue;
         try{const p=await getParsed(f.name,o.user);if(p&&p.res)addComp(p.name,p.res.rows,p.res.notes,p.res.meta)}catch(x){}}
     }
     for(const k of comps){const o=allCat().find(z=>z.files.some(f=>f.name===k.file));if(o&&!o.user)k.label=[o.short||o.title,o.date].filter(Boolean).join(', ')}
