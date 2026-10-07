@@ -28,11 +28,14 @@
   "place": "г. Тирасполь",
   "date": "27–28.02.2026",
   "start": "2026-02-27",
-  "note": "В итоговом протоколе только первый день (27.02).",
   "files": [
    {
-    "name": "mercisor_2026_itog.xlsx",
-    "kind": "itog"
+    "name": "mercishor_2026.xlsx",
+    "kinds": [
+     "itog",
+     "start",
+     "zayavka"
+    ]
    }
   ]
  }
