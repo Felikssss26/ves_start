@@ -252,46 +252,53 @@ const fS=v=>{if(v==null||isNaN(v))return '';const s=Math.round(v*100)/100,m=Math
 const resSec=r=>typeof r.res==='number'?r.res*86400:null;
 const STY={'в/с':'вольный стиль','к/п':'комплексное плавание','брасс':'брасс','батт':'баттерфляй','н/с':'на спине'};
 // ---- разбор технической заявки (матрица ячеек одного листа)
-function parseMatrix(a,fname){
+function parseEntryLoose(a,distRaw){          // заявка без подписей колонок: №, ФИО, пол, г.р., …, время, …, тренер; дистанция задана в каталоге
+  if(!a.slice(0,3).some(r=>r&&r.some(c=>typeof c==='string'&&/заявк/i.test(c))))return [];
+  const dist=nDist(distRaw),out=[];
+  for(const r of a){
+    if(!r||typeof r[0]!=='number'||typeof r[1]!=='string'||!r[1].trim())continue;
+    const yob=parseInt(r[3])||null;let ti=-1;
+    for(let k=4;k<r.length;k++)if(tSec(r[k])!=null){ti=k;break}
+    if(ti<0||!yob)continue;
+    const coach=r.slice(ti+1).reverse().find(x=>typeof x==='string'&&x.trim());
+    out.push({team:'',city:'',fio:r[1].replace(/\s+/g,' ').trim(),key:nk(r[1]),yob,grp:grpOf(yob),gd:true,rank:'',coach:coach?String(coach).trim():'',day:1,dist,ord:ti,t:tSec(r[ti]),raw:String(r[ti]).trim(),sex:sexCell(r[2]),tm:false});
+  }
+  return out;
+}
+function parseMatrix(a,fname,opts){
   const h=a.findIndex(r=>r&&typeof r[1]==='string'&&/фамили/i.test(r[1]));
-  if(h<0)return [];
+  if(h<0)return opts&&opts.entryDist?parseEntryLoose(a,opts.entryDist):[];
   let team='';
   for(let i=0;i<=h&&!team;i++)for(const c of a[i]||[]){const m=typeof c==='string'&&c.match(/«([^»]+)»/);if(m){team=m[1].trim();break}}
   const w=team.split(' ')[0];if(/^[A-ZА-ЯЁ0-9\-]{3,}$/.test(w))team=w;
   team=team||fname.replace(/\.[^.]+$/,'');
-  const hd=a[h]||[],st=a[h+1]||[],mt=a[h+2]||[],cols=[];
-  let day=1,cc=-1,yc=-1,rc=-1,start=h+3;
-  for(let c=0;c<Math.max(hd.length,st.length,mt.length);c++){
-    if(typeof hd[c]==='string'){
-      if(/тренер/i.test(hd[c]))cc=c;
-      else{
-        if(yc<0&&/год|г\.?\s?р/i.test(hd[c]))yc=c;
-        if(rc<0&&/^разряд/i.test(hd[c].trim()))rc=c;
-        if(c>=4)day=/[IІ]{2}|2|вт/i.test(hd[c])?2:1;
-      }
-    }
+  const hd=a[h]||[],st=a[h+1]||[],mt=a[h+2]||[],cols=[],rowsD=[a[h-1]||[],hd];
+  const dayAt=c=>{let d=1;for(let k=0;k<=c;k++)for(const rr of rowsD){const v=rr[k];if(typeof v!=='string')continue;const m=v.trim().match(/^(\d)\s*день|^(I{1,2}|І{1,2})\s*день/i);if(m)d=m[1]?+m[1]:m[2].length}return d};
+  let cc=-1,yc=-1,rc=-1;
+  for(let c=0;c<hd.length;c++){const v=hd[c];if(typeof v!=='string')continue;
+    if(/тренер/i.test(v))cc=c;else{if(yc<0&&/год|г\.?\s?р/i.test(v))yc=c;if(rc<0&&/^разряд/i.test(v.trim()))rc=c}}
+  for(let c=4;c<Math.max(hd.length,st.length,mt.length);c++){      // подписи в двух строках: стиль и метры
     const m=typeof mt[c]==='number'?mt[c]:(/^\s*\d+\s*$/.test(mt[c])?+mt[c]:0),sty=String(st[c]||'').toLowerCase().trim();
-    if(c>=4&&m>0&&STY[sty])cols.push({c,day,dist:m+' м '+STY[sty]});
+    if(m>0&&STY[sty])cols.push({c,day:dayAt(c),dist:m+' м '+STY[sty]});
   }
-  if(!cols.length){                                    // подписи в одной строке: «50 в/с», «100 к/п», «50 бат.»
-    let d2=1;start=h+2;
-    for(let c=0;c<st.length;c++){
-      if(typeof hd[c]==='string'&&c>=4&&!/тренер|разряд/i.test(hd[c]))d2=/[IІ]{2}|2|вт/i.test(hd[c])?2:1;
-      const m=typeof st[c]==='string'&&st[c].trim().toLowerCase().match(/^(\d+)\s*(в\/с|брасс|к\/п|н\/с|бат+\.?)$/);
-      if(m)cols.push({c,day:d2,dist:+m[1]+' м '+STY[m[2].startsWith('бат')?'батт':m[2]]});
-    }
-  }
+  const LBL=/^(\d+)\s*(в\/с|брасс|к\/п|н\/с|бат+\.?)$/;
+  const combined=row=>{const out=[];for(let c=4;c<row.length;c++){const m=typeof row[c]==='string'&&row[c].trim().toLowerCase().match(LBL);if(m)out.push({c,day:dayAt(c),dist:+m[1]+' м '+STY[m[2].startsWith('бат')?'батт':m[2]]})}return out};
+  if(!cols.length)cols.push(...combined(st));      // подписи «50 в/с» в строке под заголовком
+  if(!cols.length)cols.push(...combined(hd));      // подписи «50 в/с» в самой строке заголовка
   if(!cols.length)return [];
+  const lab=re=>{for(let k=h;k<=h+2&&k<a.length;k++){const j=(a[k]||[]).findIndex(c=>typeof c==='string'&&re.test(c.trim()));if(j>=0)return j}return -1};
+  const sxc=lab(/^пол$/i),scc=lab(/^школ/i),ctc=lab(/^город/i);
   const dc=new Set(cols.map(x=>x.c)),yi=yc>=0?yc:2,ri=rc>=0?rc:3,out=[];
   const txt=(r,i)=>i>=0&&!dc.has(i)&&typeof r[i]==='string'&&r[i].trim()&&tSec(r[i])==null?r[i].replace(/\s+/g,' ').trim():null;
-  for(let i=start;i<a.length;i++){
+  for(let i=h+1;i<a.length;i++){
     const r=a[i]||[],fio=r[1];
-    if(typeof fio!=='string'||!fio.trim())continue;
+    if(typeof fio!=='string'||!fio.trim()||/фамили/i.test(fio))continue;
     const yob=parseInt(r[yi])||null,rank=nRank(r[ri])||'',coach=cc>=0&&r[cc]?String(r[cc]).trim():'';
-    const own=rc>=0?nClub(txt(r,rc+1)):null,city=rc>=0?txt(r,rc+2):null;     // клуб и город — в колонках справа от разряда
+    const own=nClub(scc>=0?txt(r,scc):(rc>=0?txt(r,rc+1):null)),city=ctc>=0?txt(r,ctc):(rc>=0&&scc<0?txt(r,rc+2):null);
     const gv=!dc.has(yi+1)&&typeof r[yi+1]==='number'&&r[yi+1]>=1&&r[yi+1]<=9?r[yi+1]:null;
     for(const c of cols){const v=r[c.c];if(v==null||String(v).trim()==='')continue;
-      out.push({team:own||team,city:city||'',fio:fio.replace(/\s+/g,' ').trim(),key:nk(fio),yob,grp:gv?gv+' в.г.':grpOf(yob),gd:!gv,rank,coach,day:c.day,dist:c.dist,ord:c.c,t:tSec(v),raw:String(v).trim()})}
+      const tv=tSec(v);if(tv==null&&!/^(б\/в|без|нт|н\/т)/i.test(String(v).trim()))continue;
+      out.push({team:own||team,city:city||'',fio:fio.replace(/\s+/g,' ').trim(),key:nk(fio),yob,grp:gv?gv+' в.г.':grpOf(yob),gd:!gv,rank,coach,day:c.day,dist:c.dist,ord:c.c,t:tv,raw:String(v).trim(),sex:sxc>=0?sexCell(r[sxc]):'',tm:!!own})}
   }
   return out;
 }
@@ -300,26 +307,33 @@ function parseEntries(wb,fname){
 }
 
 // ---- разбор стартового протокола
-const nDist=d=>String(d).toLowerCase().replace(/\s+/g,' ').trim().replace('комлексное','комплексное').replace('к/п','комплексное плавание').replace('в/с','вольный стиль').replace('н/с','на спине').replace(/^(\d+) (?!м )/,'$1 м ');
+const nDist=d=>{
+  const t=String(d).toLowerCase().replace(/\s+/g,' ').trim();
+  if(/^многоборь/.test(t))return 'Многоборье (сумма)';
+  const rl=t.match(/^(\d+)\s*[хx×]\s*(\d+)\s*м?\s*(?:к\/п|комплекс|комлекс)/);
+  if(rl)return rl[1]+'×'+rl[2]+' м комплексное плавание (раздельный старт)';
+  return t.replace(/^(\d+)\s*м(?=\s|$)/,'$1 м').replace('комлексное','комплексное').replace('к/п','комплексное плавание').replace('в/с','вольный стиль').replace('н/с','на спине').replace(/(^|\s)батт\.?(?=\s|$)/,'$1баттерфляй').replace(/^(\d+) (?!м )/,'$1 м ');
+};
 const nr=x=>x==null?'':(nRank(x)||'');
 function parseStartMatrix(a){
-  const hr=a.find(r=>r&&r.some(c=>typeof c==='string'&&/^фио$/i.test(c.trim())));
-  if(!hr)return [];
+  const isHdr=r=>r.some(c=>typeof c==='string'&&/^фио$/i.test(c.trim()))||(SEXW.test(String(r[1]??'').trim())&&r.some((c,k)=>k!==1&&typeof c==='string'&&(HLAB.test(c.trim())||DISTRE.test(c))));
+  const hi=a.findIndex(r=>r&&isHdr(r));
+  if(hi<0)return [];
   const heatHdr=r=>{
     const b=String(r[1]??''),c=String(r[2]??''),m=b.match(/^\s*(\d+)\s*заплыв/i)||c.match(/^\s*(\d+)\s*заплыв/i);
     if(m)return +m[1];
     return /^\s*заплыв/i.test(c)&&typeof r[1]==='number'?r[1]:null;
   };
   if(a.filter(r=>r&&heatHdr(r)!=null).length<3)return [];
-  const h=hr.map(c=>typeof c==='string'?c.trim().toLowerCase():''),at=re=>h.findIndex(x=>re.test(x));
-  const C={name:at(/^фио$/),yob:at(/^г\.?\s?р/),grp:at(/^в\.?\s?г/),rank:at(/^разряд/),school:at(/школ/),city:at(/город/),seed:at(/результат|заявоч|время/),coach:at(/тренер/)};
+  const C=layoutAt(a,hi);
   if(C.name<0||C.yob<0)return [];
-  const isLbl=x=>/^(№.*|в\.?\s?г\.?|фио|г\.?\s?р\.?|школ.*|город.*|разряд|результат|тренер|заявоч.*|время)$/i.test(x.trim());
+  const hasDay=a.some(r=>r&&r.some(c=>typeof c==='string'&&/\d\s*день/i.test(c)));
+  const isLbl=x=>/^(№.*|в\.?\s?г\.?|фио|г\.?\s?р\.?|школ.*|город.*|разряд|результат|тренер|заявоч.*|время|причина.*)$/i.test(x.trim());
   const out=[],seen=new Set(),evs={};
-  let day=1,date='',dist='',sex='',grp='',heat=null,used=false;
+  let day=1,date='',dist='',sex='',grp='',heat=null,used=false,lastHeat=null;
   for(const r of a){
     if(!r)continue;
-    const hn=heatHdr(r);if(hn!=null){heat=hn;used=false;continue}
+    const hn=heatHdr(r);if(hn!=null){if(!hasDay&&lastHeat!=null&&hn<lastHeat)day++;lastHeat=hn;heat=hn;used=false;continue}
     const nv=r[C.name],name=typeof nv==='string'?nv.replace(/\s+/g,' ').trim():'';
     const ym=String(r[C.yob]??'').match(/\d{4}/),yob=ym?+ym[0]:null;
     if(name&&yob&&dist){
@@ -330,16 +344,16 @@ function parseStartMatrix(a){
       const gv=C.grp>=0&&typeof r[C.grp]==='number'?r[C.grp]+' в.г.':'';
       out.push({day,date,dist,ev:evs[ek],sex,heat,lane:typeof r[0]==='number'?r[0]:null,grp:gv||grpOf(yob),gd:!gv,
         fio:name,key,yob,rank:C.rank>=0?nr(r[C.rank]):'',school,city,team:school||(city?city+' (школа не указана)':'—'),
-        seed:C.seed>=0?tSec(r[C.seed]):null,coach:C.coach>=0&&r[C.coach]?String(r[C.coach]).replace(/\s+/g,' ').trim():''});
+        seed:C.res>=0?tSec(r[C.res]):null,coach:C.coach>=0&&r[C.coach]?String(r[C.coach]).replace(/\s+/g,' ').trim():''});
       continue;
     }
-    const t=[r[1],r[2],r[3],r[4]].find(x=>typeof x==='string'&&x.trim()&&!isLbl(x));
+    const t=[r[0],r[1],r[2],r[3],r[4]].find(x=>typeof x==='string'&&x.trim()&&!isLbl(x)&&!/^\d+$/.test(x.trim()));
     if(!t)continue;
     const tl=t.trim().toLowerCase();
     if(/день/.test(tl)){const m=tl.match(/(\d)\s*день/);if(m)day=+m[1];date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0];dist=sex=grp='';if(used)heat=null;continue}
-    if(/^\d{2}-\d{2}|^стартовый|^итоговый|^гл\.|^представитель|^директор/.test(tl))continue;
-    if(/^\d\s*в\.?\s*г/.test(tl)){grp=tl[0]+' в.г.';continue}
-    if(tl==='девочки'||tl==='мальчики'){sex=tl==='девочки'?'Девочки':'Мальчики';if(used)heat=null;continue}
+    if(/^\d{2}-\d{2}|^стартовый|^итоговый|^протокол|^гл\.|^представитель|^директор/.test(tl))continue;
+    if(/^\d\s*(?:в\.?\s*г|возр\.?\s*гр)/.test(tl)){grp=tl[0]+' в.г.';continue}
+    if(SEXW.test(tl)){sex=sexWord(tl);if(used)heat=null;continue}
     dist=nDist(t);sex=grp='';if(used)heat=null;
   }
   return out;
@@ -353,76 +367,117 @@ const nClub=s=>{
   const t=String(s).replace(/\s+/g,' ').trim(),k=t.toLowerCase().replace(/["«»']/g,'').replace(/^ск\s+/,'').trim(),m=k.match(/^ss[\s-]*(\d+)$/);
   if(k==='шериф')return 'СК "Шериф"';
   if(k==='сдюшор'||k==='тсдюшор')return 'ТСДЮШОР';
+  if(/^[mм][eе][cс]$/.test(k))return 'MEC';
+  if(k==='арго'||k==='argo')return 'СК Арго';
   return m?'SS-'+m[1]:t.replace('"шериф"','"Шериф"');
 };
-function parseResultsMatrix(a){
-  const isT=g=>/^\s*\d+[,.]\d\d[,.]\d\d\s*$/.test(g);
-  // раскладка колонок определяется по строке заголовков («ФИО», «г.р.», «результат» ...)
-  const C={name:1,yob:2,rank:3,school:4,city:5,res:6,rank2:7,coach:8,grp:-1};
-  const hr=a.find(r=>r&&r.some(c=>typeof c==='string'&&/^фио$/i.test(c.trim())));
-  if(hr){
-    const h=hr.map(c=>typeof c==='string'?c.trim().toLowerCase():''),at=re=>h.findIndex(x=>re.test(x)),rk=h.map((x,i)=>x==='разряд'?i:-1).filter(i=>i>=0);
-    const N={name:at(/^фио$/),yob:at(/^г\.?\s?р/),school:at(/школ/),city:at(/город/),res:at(/результат/),coach:at(/тренер/),grp:at(/^в\.?\s?г/)};
-    if(N.name>=0&&N.yob>=0&&N.res>=0){Object.assign(C,N);C.rank=rk.find(i=>i<N.res)??-1;C.rank2=rk.find(i=>i>N.res)??-1}
+// ---- общие помощники для таблиц с разной раскладкой колонок
+const SEXW=/^(девочки|мальчики|девушки|юноши)$/i;
+const DISTRE=/^\s*(?:\d+\s*[хx×]\s*)?\d+\s*м?\s*(?:к\/п|н\/с|в\/с|брасс|батт|вольн|на\s+спине|комплекс|комлекс)/i;
+const HLAB=/г\.?\s?р|школ|город|результат|разряд|тренер|сумма|^в\.?\s?г/i;
+const sexWord=t=>/^(девочки|девушки)$/i.test(t.trim())?'Девочки':'Мальчики';
+const sexCell=v=>{const t=String(v??'').trim().toLowerCase();return /^(ж|д|f|дев)/.test(t)?'Девочки':/^(м|m|мал|юн)/.test(t)?'Мальчики':''};
+const rkKey=t=>String(t).trim().toLowerCase().replace(/\s+/g,'').replace(/^iii/,'3').replace(/^ii/,'2').replace(/^[iі]/,'1');
+const rankLike=v=>{if(v==null||String(v).trim()==='')return true;const t=String(v).trim();return /^[123]$/.test(t)||rkKey(t) in RANKS};
+const isYear=v=>(typeof v==='number'&&v>=1990&&v<=2025)||(typeof v==='string'&&/^(19|20)\d\d$/.test(v.trim()));
+// раскладка колонок по строке заголовков; чего в подписях нет — определяется по первым строкам спортсменов под ней
+function layoutAt(a,i){
+  const r=a[i],h=r.map(c=>typeof c==='string'?c.trim().toLowerCase():''),at=re=>h.findIndex(x=>re.test(x));
+  const C={name:at(/^фио$/),yob:at(/^г\.?\s?р/),grp:at(/^в\.?\s?г/),school:at(/школ/),city:at(/город/),res:-1,rank:-1,rank2:-1,coach:at(/тренер/)};
+  if(C.name<0&&SEXW.test(h[1]||''))C.name=1;
+  const sum=at(/сумма|итого/),rs=h.map((x,k)=>/^результат/.test(x)?k:-1).filter(k=>k>=0);
+  C.res=sum>=0?sum:(rs.length?rs[0]:-1);C.lab=C.res>=0;
+  if(C.res<0){const dl=r.findIndex((c,k)=>k>1&&typeof c==='string'&&DISTRE.test(c));if(dl>=0)C.res=dl}
+  const rk=h.map((x,k)=>x==='разряд'?k:-1).filter(k=>k>=0);
+  if(C.res>=0){C.rank=rk.find(k=>k<C.res)??-1;C.rank2=rk.find(k=>k>C.res)??-1}else if(rk.length)C.rank=rk[0];
+  const sample=[];
+  for(let j=i+1;j<a.length&&j<i+60&&sample.length<8;j++){const q=a[j];if(q&&typeof q[0]==='number'&&typeof q[1]==='string'&&!SEXW.test(q[1].trim()))sample.push(q)}
+  const col=f=>{const cnt={};for(const q of sample)for(let k=2;k<q.length;k++)if(f(q[k]))cnt[k]=(cnt[k]||0)+1;const e=Object.entries(cnt).sort((x,y)=>y[1]-x[1]||x[0]-y[0])[0];return e?+e[0]:-1};
+  if(C.yob<0)C.yob=col(isYear);
+  if(C.yob>=0){const k0=C.rank>C.yob?C.rank:C.yob;if(C.school<0)C.school=k0+1;if(C.city<0)C.city=C.school+1;if(C.res<0)C.res=C.city+1}
+  if(C.res>=0&&C.coach<0){
+    const nx=C.res+1,vals=sample.map(q=>q[nx]).filter(v=>v!=null&&String(v).trim()!=='');
+    if(C.rank<0&&vals.length&&vals.every(rankLike)){C.rank=nx;C.coach=nx+1}else C.coach=Math.max(C.res,C.rank)+1;
   }
-  if(a.filter(r=>r&&typeof r[0]==='number'&&typeof r[C.name]==='string'&&isT(String(r[C.res]??''))).length<5)return null;
+  if(C.rank2<0&&C.res>=0&&C.coach>C.res+1){      // «разряд» после результата без подписи в заголовке
+    const nx=C.res+1,vals=sample.map(q=>q[nx]).filter(v=>v!=null&&String(v).trim()!=='');
+    if(vals.length&&vals.every(rankLike))C.rank2=nx;
+  }
+  return C;
+}
+function parseResultsMatrix(a){
   let title='',dt='';
   for(const r of a.slice(0,6))for(const c of r||[]){
+    if(typeof c==='number'&&c>40000&&c<60000&&!dt){const d=new Date((c-25569)*864e5),p2=n=>String(n).padStart(2,'0');dt=p2(d.getUTCDate())+'.'+p2(d.getUTCMonth()+1)+'.'+d.getUTCFullYear()}
     if(typeof c!=='string')continue;
     if(!dt){const m=c.match(/\d{2}(?:-\d{2})?\.\d{2}\.\d{4}/);if(m)dt=m[0]}
     if(!title&&/протокол/i.test(c))title=c.trim();
   }
-  const notes=[],R=[];
-  let dayN=1,date='',dist='',sex='',grp='',skip=false;
+  const notes=[],R=[],DEF={name:1,yob:2,rank:3,school:4,city:5,res:6,rank2:7,coach:8,grp:-1};
+  let dayN=1,date=/^\d{2}\.\d{2}\.\d{4}$/.test(dt)?dt:'',dist='',sex='',grp='',skip=false,blk=0,C=null;
   const clean=v=>v==null||String(v).trim()===''?null:String(v).replace(/\s+/g,' ').trim();
   for(let i=0;i<a.length;i++){
     const r=a[i];if(!r)continue;
-    const B=r[C.name],G=String(r[C.res]??'').trim(),ym=String(r[C.yob]??'').match(/\d{4}/);
-    const isath=typeof B==='string'&&!/^фио$/i.test(B.trim())&&G.toLowerCase()!=='результат'&&(typeof r[0]==='number'||(G&&ym));
-    if(isath){
-      if(!dist||skip)continue;
-      R.push({row:i,dayN,date,dist,sex,grp:grp||(C.grp>=0&&typeof r[C.grp]==='number'?r[C.grp]+' в.г.':''),place:typeof r[0]==='number'?r[0]:null,fio:clean(B),yob:ym?+ym[0]:null,rank:nRank(r[C.rank]),
-        school:nClub(clean(r[C.school])),city:clean(r[C.city]),res:G,rank2:nRank(r[C.rank2]),coach:clean(r[C.coach])});
+    const isH=r.some(c=>typeof c==='string'&&/^фио$/i.test(c.trim()))||(SEXW.test(String(r[1]??'').trim())&&r.some((c,k)=>k!==1&&typeof c==='string'&&(HLAB.test(c.trim())||DISTRE.test(c))));
+    if(isH){
+      const L=layoutAt(a,i);if(L.name>=0&&L.yob>=0&&L.res>=0)C=(C&&!L.lab&&C.name===L.name&&C.yob===L.yob)?C:L;      // заголовок без подписи «результат» наследует раскладку предыдущего
+      if(SEXW.test(String(r[1]??'').trim())){sex=sexWord(String(r[1]));blk++}
+      const dl=r.findIndex((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c));
+      if(dl>=0){dist=nDist(r[dl]);grp=''}
       continue;
     }
-    const t=[r[1],r[2],r[3]].map(x=>x==null?'':String(x).trim()).find(Boolean)||'',tl=t.toLowerCase();
-    if(/^стартов/.test(tl)||/заплыв/.test(tl)){skip=true;continue}
+    const Z=C||DEF,B=r[Z.name],cell=r[Z.res],G=typeof cell==='number'?String(cell):String(cell??'').trim(),ym=String(r[Z.yob]??'').match(/\d{4}/);
+    const isath=typeof B==='string'&&!/^фио$/i.test(B.trim())&&!/^результат/i.test(G)&&(typeof r[0]==='number'||(G&&ym));
+    if(isath){
+      if(!dist||skip)continue;
+      R.push({row:i,dayN,date,dist,sex,blk,grp:grp||(Z.grp>=0&&typeof r[Z.grp]==='number'?r[Z.grp]+' в.г.':''),place:typeof r[0]==='number'?r[0]:null,fio:clean(B),yob:ym?+ym[0]:null,rank:nRank(r[Z.rank]),
+        school:nClub(clean(r[Z.school])),city:clean(r[Z.city]),res:G,rank2:nRank(r[Z.rank2]),coach:clean(r[Z.coach])});
+      continue;
+    }
+    const t=[r[0],r[1],r[2],r[3]].map(x=>typeof x==='string'?x.trim():'').find(x=>x&&!/^№/.test(x)&&!/^\d+$/.test(x))||'',tl=t.toLowerCase();
+    if(/заплыв/.test(tl)){skip=true;continue}
     if(/^итогов/.test(tl)){skip=false;continue}
     if(!t||/^фио$/.test(tl)||/^гл\./.test(tl)||/^\d{2}-\d{2}/.test(tl))continue;
-    if(/день/.test(tl)){dayN=/^\s*2/.test(tl)?2:1;date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0];continue}
-    if(/^\d\s*в\.?\s*г\.?$/.test(tl)){grp=tl[0]+' в.г.';continue}
-    if(tl==='девочки'||tl==='мальчики'){sex=tl==='девочки'?'Девочки':'Мальчики';continue}
+    if(/день/.test(tl)){dayN=/^\s*2/.test(tl)?2:1;date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0]||date;continue}
+    if(/^\d\s*(?:в\.?\s*г|возр\.?\s*гр)\.?$/.test(tl)){grp=tl[0]+' в.г.';continue}
+    if(SEXW.test(tl)){sex=sexWord(tl);blk++;continue}
     dist=nDist(t);sex=grp='';
   }
+  if(R.length<5)return null;
   const bump=(m,k)=>m.set(k,(m.get(k)||0)+1);
   for(const x of R){
-    const m=x.res.match(/^(\d+)[,.](\d\d)[,.](\d\d)$/);
-    x.bad=!!m&&+m[2]>=60;x.sec=m?+m[1]*60+ +m[2]+ +m[3]/100:null;
+    let m=x.res.match(/^(\d+)[,.](\d\d)[,.](\d{1,2})$/);
+    if(m){x.bad=+m[2]>=60;x.sec=+m[1]*60+ +m[2]+ +m[3]*(m[3].length===1?10:1)/100}
+    else if(/^\d+(?:[.,]\d+)?$/.test(x.res)){x.bad=false;x.sec=Math.round(parseFloat(x.res.replace(',','.'))*100)/100;m=true}
+    else{x.bad=false;x.sec=null}
     const rl=x.res.toLowerCase().replace(/[\s\/\\.]/g,'');
     x.st=m?null:(rl==='ня'?'не явился':rl==='дк'?'дисквалификация':null);
   }
-  // пропуски школы и города
   const info={};
   R.forEach(x=>{const k=x.fio.toLowerCase();if(x.school&&x.city&&!info[k])info[k]=[x.school,x.city]});
   R.forEach(x=>{const k=x.fio.toLowerCase();if(!x.city&&!x.school&&info[k]){[x.school,x.city]=info[k];notes.push({t:'Заполнены пропуски',d:`${x.fio} — ${x.dist}: школа и город взяты из других строк спортсмена (${x.school}, ${x.city})`})}});
-  // возрастные группы без заголовка
-  const gn=new Map(),ymap=new Map();
-  R.forEach(x=>{if(x.grp&&x.yob&&x.place!=null){const m=ymap.get(x.yob)||ymap.set(x.yob,new Map()).get(x.yob);m.set(x.grp,(m.get(x.grp)||0)+1)}});
-  const yg=y=>{const m=ymap.get(y);return m?[...m].sort((p,q)=>q[1]-p[1])[0][0]:(y?y+' г.р.':'')};
-  for(const x of R){
-    const hg=x.grp;
-    if(x.place==null&&x.sec!=null){const g=yg(x.yob)||hg;if(g!==hg)bump(gn,x.dist+', '+x.sex);x.grp=g}
-    else if(!hg){x.grp=yg(x.yob);bump(gn,x.dist+', '+x.sex)}
+  // возрастные группы
+  const gn=new Map(),ymap=new Map(),blocks=!R.some(x=>x.grp);
+  if(blocks){      // в протоколе нет групп: каждый блок (пол + диапазон годов) — отдельная группа
+    const by=new Map();R.forEach(x=>{if(x.yob){(by.get(x.blk)||by.set(x.blk,[]).get(x.blk)).push(x.yob)}});
+    const lb=new Map();by.forEach((ys,b)=>{const mn=Math.min(...ys),mx=Math.max(...ys);lb.set(b,mn===mx?mn+' г.р.':mn+'–'+mx+' г.р.')});
+    R.forEach(x=>{x.grp=lb.get(x.blk)||''});
+  }else{
+    R.forEach(x=>{if(x.grp&&x.yob&&x.place!=null){const m=ymap.get(x.yob)||ymap.set(x.yob,new Map()).get(x.yob);m.set(x.grp,(m.get(x.grp)||0)+1)}});
+    const yg=y=>{const m=ymap.get(y);return m?[...m].sort((p,q)=>q[1]-p[1])[0][0]:(y?y+' г.р.':'')};
+    for(const x of R){
+      const hg=x.grp;
+      if(x.place==null&&x.sec!=null){const g=yg(x.yob)||hg;if(g!==hg)bump(gn,x.dist+', '+x.sex);x.grp=g}
+      else if(!hg){x.grp=yg(x.yob);bump(gn,x.dist+', '+x.sex)}
+    }
+    gn.forEach((n,k)=>notes.push({t:'Уточнена возрастная группа',d:`${k}: в протоколе нет верной группы у ${n} строк — группа определена по году рождения (по остальным строкам протокола)`}));
   }
-  gn.forEach((n,k)=>notes.push({t:'Уточнена возрастная группа',d:`${k}: в протоколе нет верной группы у ${n} строк — группа определена по году рождения (по остальным строкам протокола)`}));
-  // дубли
   const seen=new Set(),D=[];
   for(const x of R){
     const k=[x.dist,x.sex,x.fio.toLowerCase(),x.res].join('|');
     if(seen.has(k)&&x.sec!=null){notes.push({t:'Удалён дубль',d:`${x.fio} — ${x.dist}, ${x.sex}, ${x.res}: строка повторялась дважды`});continue}
     seen.add(k);D.push(x);
   }
-  // места пересчитываются по времени внутри группы
   const G2=new Map(),pn=new Map();
   D.forEach(x=>{const k=[x.dayN,x.dist,x.sex,x.grp].join('|');(G2.get(k)||G2.set(k,[]).get(k)).push(x)});
   for(const g of G2.values()){
@@ -434,7 +489,7 @@ function parseResultsMatrix(a){
   const order=[];D.forEach(x=>{const k=x.dayN+'|'+x.dist;if(!order.includes(k))order.push(k)});
   const gr={'Девочки':0,'Мальчики':1};
   D.sort((p,q)=>order.indexOf(p.dayN+'|'+p.dist)-order.indexOf(q.dayN+'|'+q.dist)||(gr[p.sex]??2)-(gr[q.sex]??2)||p.grp.localeCompare(q.grp)||(p.mesto??999)-(q.mesto??999)||p.row-q.row);
-  return {notes,meta:{title,dt},rows:D.map(x=>({date:x.date,dist:x.dist,sex:x.sex,grp:x.grp,pl:x.mesto,fio:x.fio,yob:x.yob,rank:x.rank,club:x.school,city:x.city,
+  return {notes,meta:{title,dt,blocks},rows:D.map(x=>({date:x.date,dist:x.dist,sex:x.sex,grp:x.grp,pl:x.mesto,fio:x.fio,yob:x.yob,rank:x.rank,club:x.school,city:x.city,
     res:x.sec!=null?(x.bad?x.res.replace(',',':'):x.sec/86400):null,rank2:x.sec!=null?x.rank2:null,coach:x.coach,st:x.st,
     team:x.school||(x.city?x.city+' (школа не указана)':'—')}))};
 }
@@ -526,7 +581,7 @@ function renderCmp(){
     box.innerHTML=wrapT(200+comps.length*150,'<th>Клуб'+comps.map(c=>th(c.lab)).join(''),L.map(([n,o])=>`<tr><td><b>${esc(n)}</b></td>`+o.map(x=>x.p.size?`<td class="t">${x.m.join(' / ')}<br><span style="color:var(--mute);font-weight:400">уч.: ${x.p.size}</span></td>`:'<td>—</td>').join('')+'</tr>').join(''))+hint;
   }
 }
-$('cs').addEventListener('change',()=>{picked=true;curFile=$('cs').value;const c=comps.find(x=>x.file===curFile);rows=c.rows;resNotes=c.notes;showNotes();init();saveState()});
+$('cs').addEventListener('change',()=>{picked=true;curFile=$('cs').value;const c=comps.find(x=>x.file===curFile);rows=c.rows;resNotes=c.notes;showNotes();init()});
 ['cm','ca','cd','cx','cg'].forEach(id=>$(id).addEventListener('input',renderCmp));
 
 // ---- разрядные нормативы (мальчики / юноши), порядок: МСМК, МС, КМС, 1, 2, 3, 1 юн., 2 юн.; «-» — норматива нет
@@ -592,19 +647,30 @@ function renderNorms(){
   $('nb').innerHTML=Object.entries(NORMS['Мальчики']).map(([k,v])=>{const i=k.lastIndexOf(' ');return `<tr><td><b>${esc(k.slice(0,i))}, ${k.slice(i+1)} м</b></td>`+v.map(x=>`<td class="t">${x==null?'—':fS(x)}</td>`).join('')+'</tr>'}).join('');
 }
 renderNorms();
-function parseWorkbook(wb,fname){
+function parseWorkbook(wb,fname,opts){
   const mx=n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:null,raw:true}),st=[],ent=[],rr=[],notes=[];let meta=null;
   for(const n of wb.SheetNames){
-    const a=mx(n);
-    const en=parseMatrix(a,fname);st.push(...parseStartMatrix(a));ent.push(...en);
+    const a=mx(n),en=parseMatrix(a,fname,opts);st.push(...parseStartMatrix(a));ent.push(...en);
     const pr=en.length?null:parseResultsMatrix(a);      // лист заявки не принимаем за итоги (в нём тоже есть времена)
     if(pr&&pr.rows.length){rr.push(...pr.rows);notes.push(...pr.notes);meta=meta||pr.meta}
   }
   if(!st.length&&!ent.length&&!rr.length)throw new Error('не удалось распознать: нужен итоговый или стартовый протокол либо техническая заявка');
-  if(rr.length){      // возрастные группы по году рождения берём из итогов этого же соревнования
+  if(rr.length){
+    // клуб, город и группа участника берутся из итогов этого же соревнования
+    const who=new Map(),gm=new Map();
+    rr.forEach(x=>{const k=nk(x.fio);if(!who.has(k)&&(x.club||x.city))who.set(k,x);gm.set(k+'|'+dkey(x.dist),x.grp)});
+    [...st,...ent].forEach(x=>{
+      const m=who.get(x.key);
+      if(m){
+        if('school' in x){if(!x.school&&!x.city){x.school=m.club||'';x.city=m.city||'';x.team=m.team}else if(!x.city&&x.school===(m.club||''))x.city=m.city||''}
+        else if(!x.tm){x.team=m.team;x.city=x.city||m.city||''}
+      }
+      const g=gm.get(x.key+'|'+dkey(x.dist));
+      if(g!==undefined&&(x.gd||(meta&&meta.blocks)))x.grp=g;else if(meta&&meta.blocks&&x.gd)x.grp='';
+    });
     const ym=new Map();rr.forEach(x=>{if(x.grp&&x.yob&&x.pl!=null){const m=ym.get(x.yob)||ym.set(x.yob,new Map()).get(x.yob);m.set(x.grp,(m.get(x.grp)||0)+1)}});
     const g=y=>{const m=ym.get(y);return m?[...m].sort((p,q)=>q[1]-p[1])[0][0]:null};
-    [...st,...ent].forEach(x=>{if(x.gd){const v=g(x.yob);if(v)x.grp=v}});
+    if(!(meta&&meta.blocks))[...st,...ent].forEach(x=>{if(x.gd&&!gm.has(x.key+'|'+dkey(x.dist))){const v=g(x.yob);if(v)x.grp=v}});
   }
   return {rows:rr,notes,meta,st,ent};
 }
@@ -791,22 +857,22 @@ $('inst').onclick=async()=>{if(!installEv)return;installEv.prompt();await instal
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 
 // разбор одного файла: итоги, стартовый протокол или заявка
-async function parseFile(f){
+async function parseFile(f,opts){
   const wb=await readBook(await f.arrayBuffer()),mx=n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:null,raw:true});
   if(wb.Sheets['Результаты']){
     const rr=XLSX.utils.sheet_to_json(wb.Sheets['Результаты'],{defval:null,raw:true}).map(o=>{const r={};for(const k in KEYS)r[KEYS[k]]=o[k]??null;r.pl=typeof r.pl==='number'?r.pl:null;r.team=r.team||r.club||r.city||'—';return r}).filter(r=>r.fio);
     if(!rr.length)throw new Error('лист «Результаты» пуст');
     return {name:f.name,res:{rows:rr,notes:[],meta:null}};
   }
-  const p=parseWorkbook(wb,f.name);
+  const p=parseWorkbook(wb,f.name,opts);
   return {name:f.name,res:p.rows.length?{rows:p.rows,notes:p.notes,meta:p.meta}:undefined,st:p.st,ent:p.ent};
 }
-async function getParsed(name,user){
+async function getParsed(name,user,opts){
   if(user)return userParsed[name];
   if(PC[name])return PC[name];
   const r=await fetch('data/'+encodeURIComponent(name),{cache:'no-cache'});
   if(!r.ok)throw new Error('файл недоступен');
-  return PC[name]=await parseFile(new File([await r.blob()],name));
+  return PC[name]=await parseFile(new File([await r.blob()],name),opts);
 }
 async function fetchCatalog(){
   try{const r=await fetch('data/index.json',{cache:'no-cache'});if(!r.ok)return [];
@@ -847,7 +913,7 @@ async function openCompetition(id,push=true){
     rows=[];ents=[];starts=[];efiles={};sfiles={};comps=[];resNotes=[];picked=false;curFile='';
     const errs=[],mine=[];
     for(const f of c.files){
-      try{const p=await getParsed(f.name,c.user);if(!p)continue;
+      try{const p=await getParsed(f.name,c.user,f.entryDist?{entryDist:f.entryDist}:undefined);if(!p)continue;
         if(p.res){addComp(p.name,p.res.rows,p.res.notes,p.res.meta);mine.push(p.name)}
         if(p.st&&p.st.length)sfiles[p.name]=p.st;
         if(p.ent&&p.ent.length)efiles[p.name]=p.ent;
@@ -856,7 +922,7 @@ async function openCompetition(id,push=true){
     for(const o of allCat()){
       if(o.id===id)continue;
       for(const f of o.files){if(!o.user&&!(f.kinds||[f.kind]).includes('itog'))continue;
-        try{const p=await getParsed(f.name,o.user);if(p&&p.res)addComp(p.name,p.res.rows,p.res.notes,p.res.meta)}catch(x){}}
+        try{const p=await getParsed(f.name,o.user,f.entryDist?{entryDist:f.entryDist}:undefined);if(p&&p.res)addComp(p.name,p.res.rows,p.res.notes,p.res.meta)}catch(x){}}
     }
     for(const k of comps){const o=allCat().find(z=>z.files.some(f=>f.name===k.file));if(o&&!o.user)k.label=[o.short||o.title,o.date].filter(Boolean).join(', ')}
     ents=Object.values(efiles).flat();starts=Object.values(sfiles).flat();
