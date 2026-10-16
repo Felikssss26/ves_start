@@ -1,5 +1,5 @@
 // Весёлые старты — офлайн-кэш. При изменении файлов приложения увеличьте номер версии V.
-const V='ves-v8';
+const V='ves-v9';
 const SHELL=["./", "./index.html", "./manifest.webmanifest", "./lib/jszip.min.js", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/maskable-512.png", "./icons/apple-touch-icon.png", "./icons/favicon.png", "./data/index.json", "./data/pervenstvo_pmr_2026.xlsx", "./data/mercishor_2026.xlsx", "./data/mercichor_2025.xlsx", "./data/zolotaia_osen_2025.xlsx", "./data/super_sprint_2025.xlsx", "./data/shvets_kovalenko_2026.xlsx", "./data/super_sprint_2026.xlsx"];
 const CDN=['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{
