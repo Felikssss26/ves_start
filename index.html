@@ -172,7 +172,7 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
         <button class="btn ghost" id="rst" style="color:var(--ink)">Сбросить</button>
       </div>
       <div class="count" id="cnt"></div>
-      <div class="wrap"><table><thead><tr><th>Место<th>ФИО<th>Г.р.<th>Клуб<th>Город<th>Результат<th>Разряд (мальчики): было → стало<th>Тренер</thead><tbody id="tb"></tbody></table></div>
+      <div class="wrap"><table><thead><tr><th>Место<th>ФИО<th>Г.р.<th>Клуб<th>Город<th>Результат<th>Разряд: было → стало<th>Тренер</thead><tbody id="tb"></tbody></table></div>
     </section>
     <section id="v-win" class="hide"><div class="filters"><select id="wd"></select><select id="ws"></select><select id="wg"></select></div><div class="cards" id="cards"></div></section>
     <section id="v-med" class="hide"><div class="wrap"><table style="min-width:520px"><thead><tr><th>Клуб<th>Город<th>Золото<th>Серебро<th>Бронза<th>Всего<th>Участников</thead><tbody id="mb"></tbody></table></div></section>
@@ -195,8 +195,11 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
       <div class="wrap"><table><thead><tr><th>Дор.<th>ФИО<th>Г.р.<th>Группа<th>Разряд<th>Клуб<th>Заявка<th>Тренер</thead><tbody id="stb"></tbody></table></div>
     </section>
     <section id="v-nrm" class="hide">
-      <div class="count">Разрядные нормативы для мальчиков и юношей (по фото таблицы), время в формате мин:сек,сотые. Таблица применяется только к мальчикам и юношам: у девочек изменение разряда не показывается.</div>
+      <div class="count">Разрядные нормативы (бассейн 25 м, по фото таблиц), время в формате мин:сек,сотые. По ним в итогах показывается повышение разряда и в динамике — сколько не хватает до следующего.</div>
+      <h3 class="hh" style="font-size:16px">Мальчики и юноши</h3>
       <div class="wrap"><table style="min-width:700px"><thead><tr><th>Дистанция<th>МСМК<th>МС<th>КМС<th>Вз1<th>Вз2<th>Вз3<th>Юн1<th>Юн2</thead><tbody id="nb"></tbody></table></div>
+      <h3 class="hh" style="font-size:16px;margin-top:20px">Девочки и девушки</h3>
+      <div class="wrap"><table style="min-width:700px"><thead><tr><th>Дистанция<th>МСМК<th>МС<th>КМС<th>Вз1<th>Вз2<th>Вз3<th>Юн1<th>Юн2</thead><tbody id="ng"></tbody></table></div>
     </section>
     <section id="v-cmp" class="hide">
       <div class="filters">
@@ -599,7 +602,7 @@ function renderCmp(){
       b+=`<td class="t">${dl==null?'—':`<span style="color:${dl<=0?'var(--ok)':'var(--bad)'};font-weight:600">${dS(dl)}</span>`}</td>${nrCell(o,vals)}</tr>`;
     }
     cc.textContent=n+' · стартов: '+nst+' · медалей: '+nm;
-    box.innerHTML=wrapT(380+comps.length*110,'<th>Дистанция'+comps.map(c=>th(c.lab)).join('')+'<th>Динамика<th>До следующего разряда',b)+'<p style="color:var(--mute);margin:8px 2px">★ — личный рекорд среди загруженных соревнований. Динамика — разница между двумя последними стартами на дистанции (зелёный — быстрее). Сравнивайте с учётом длины бассейна. «До следующего разряда» считается по лучшему времени на дистанции с учётом имеющегося разряда; только для мальчиков и юношей.</p>'+hint;
+    box.innerHTML=wrapT(380+comps.length*110,'<th>Дистанция'+comps.map(c=>th(c.lab)).join('')+'<th>Динамика<th>До следующего разряда',b)+'<p style="color:var(--mute);margin:8px 2px">★ — личный рекорд среди загруженных соревнований. Динамика — разница между двумя последними стартами на дистанции (зелёный — быстрее). Сравнивайте с учётом длины бассейна. «До следующего разряда» считается по лучшему времени на дистанции с учётом имеющегося разряда; по таблицам нормативов для мальчиков и девочек (бассейн 25 м).</p>'+hint;
   }else if(m==='d'){
     const dk=$('cd').value,sx=$('cx').value,gp=$('cg').value;
     const F=c=>c.rows.filter(r=>dkey(r.dist)===dk&&(!sx||r.sex===sx)&&(!gp||String(r.yob)===gp)&&T(r)!=null);
@@ -644,8 +647,28 @@ const NM={
 'комплексное плавание 100':'0:57:50 1:00:50 1:03:70 1:08:20 1:17:00 1:27:00 1:37:00 1:50:00',
 'комплексное плавание 200':'2:04:00 2:10:50 2:18:00 2:29:00 2:47:00 3:08:00 3:32:00 -',
 'комплексное плавание 400':'4:27:00 4:40:00 5:00:00 5:15:00 5:53:00 6:42:00 - -'};
+const NG={
+'вольный стиль 50':'0:26:00 0:27:50 0:28:90 0:31:00 0:34:50 0:39:00 0:45:00 0:51:00',
+'вольный стиль 100':'0:56:50 0:59:50 1:02:50 1:07:00 1:15:00 1:25:00 1:38:50 1:51:00',
+'вольный стиль 200':'2:03:00 2:10:00 2:16:50 2:27:00 2:44:00 3:05:00 3:33:00 -',
+'вольный стиль 400':'4:22:00 4:35:00 4:48:00 5:11:00 5:45:00 6:35:00 7:40:00 -',
+'вольный стиль 800':'8:55:00 9:20:00 9:58:00 10:39:00 11:55:00 13:40:00 - -',
+'вольный стиль 1500':'17:20:00 18:00:00 19:30:00 20:45:00 23:15:00 27:00:00 - -',
+'брасс 50':'0:33:50 0:34:50 0:36:50 0:38:50 0:43:00 0:49:00 0:55:00 1:01:00',
+'брасс 100':'1:12:00 1:14:50 1:19:00 1:24:50 1:35:00 1:50:00 2:00:00 -',
+'брасс 200':'2:36:00 2:41:00 2:49:00 3:01:00 3:25:00 3:50:00 4:15:00 -',
+'баттерфляй 50':'0:28:50 0:30:50 0:32:00 0:33:50 0:37:50 0:43:00 0:55:00 1:00:00',
+'баттерфляй 100':'1:03:00 1:06:00 1:09:00 1:14:50 1:24:00 1:35:00 1:55:00 -',
+'баттерфляй 200':'2:20:00 2:25:00 2:32:00 2:42:00 3:05:00 3:31:00 4:00:00 -',
+'на спине 50':'0:29:50 0:30:50 0:32:50 0:35:00 0:39:00 0:45:00 0:54:00 0:59:00',
+'на спине 100':'1:03:00 1:07:50 1:10:50 1:16:00 1:24:50 1:36:00 1:52:00 -',
+'на спине 200':'2:16:50 2:24:00 2:33:00 2:43:00 3:05:00 3:25:00 3:50:00 -',
+'комплексное плавание 100':'1:06:50 1:08:00 1:12:00 1:17:00 1:26:00 1:37:00 1:50:00 2:05:00',
+'комплексное плавание 200':'2:20:00 2:26:50 2:36:00 2:47:00 3:08:00 3:30:00 3:59:00 -',
+'комплексное плавание 400':'4:58:00 5:15:00 5:32:00 5:55:00 6:40:00 7:25:00 8:30:00 -'};
 const RK=['МСМК','МС','КМС','1','2','3','1юн.','2юн.'];
-const NORMS={'Мальчики':Object.fromEntries(Object.entries(NM).map(([k,v])=>[k,v.split(' ').map(x=>{if(x==='-')return null;const p=x.split(':');return +p[0]*60+ +p[1]+ +p[2]/100})]))};
+const nTab=T=>Object.fromEntries(Object.entries(T).map(([k,v])=>[k,v.split(' ').map(x=>{if(x==='-')return null;const p=x.split(':');return +p[0]*60+ +p[1]+ +p[2]/100})]));
+const NORMS={'Мальчики':nTab(NM),'Девочки':nTab(NG)};
 const RORD={'б/р':0,'3юн.':0.5,'2юн.':1,'1юн.':2,'3':3,'2':4,'1':5,'КМС':6,'МС':7,'МСМК':8};
 const rkN=v=>{if(v==null||String(v).trim()==='')return 'б/р';const t=String(v).trim(),k={'1 взр.':'1','2 взр.':'2','3 взр.':'3'}[t]||t;return k in RORD?k:'б/р'};
 const RKL={'1':'Вз1','2':'Вз2','3':'Вз3','1юн.':'Юн1','2юн.':'Юн2','3юн.':'Юн3'};
@@ -684,6 +707,7 @@ function rcell(r){
   return t;
 }
 function renderNorms(){
+  $('ng').innerHTML=Object.entries(NORMS['Девочки']).map(([k,v])=>{const i=k.lastIndexOf(' ');return `<tr><td><b>${esc(k.slice(0,i))}, ${k.slice(i+1)} м</b></td>`+v.map(x=>`<td class="t">${x==null?'—':fS(x)}</td>`).join('')+'</tr>'}).join('');
   $('nb').innerHTML=Object.entries(NORMS['Мальчики']).map(([k,v])=>{const i=k.lastIndexOf(' ');return `<tr><td><b>${esc(k.slice(0,i))}, ${k.slice(i+1)} м</b></td>`+v.map(x=>`<td class="t">${x==null?'—':fS(x)}</td>`).join('')+'</tr>'}).join('');
 }
 renderNorms();
