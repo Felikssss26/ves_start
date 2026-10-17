@@ -387,7 +387,7 @@ function parseStartMatrix(a,defD){
     const tl=t.trim().toLowerCase();
     if(/день/.test(tl)){const m=tl.match(/(\d)\s*день/);if(m)day=+m[1];date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0];dist=sex=grp='';if(used)heat=null;continue}
     if(/^\d{2}-\d{2}|^стартовый|^итоговый|^протокол|^гл\.|^представитель|^директор/.test(tl))continue;
-    if(/^\d\s*(?:в\.?\s*г|возр\.?\s*гр)/.test(tl)){grp=tl[0]+' в.г.';continue}
+    if(/^\d\s*(?:в\.?\s*г|воз(?:р)?\.?\s*гр)/.test(tl)){grp=tl[0]+' в.г.';continue}
     if(SEXW.test(tl)){sex=sexWord(tl);if(used)heat=null;continue}
     if(ri<hi&&!DISTRE.test(t))continue;
     dist=nDist(t);sex=grp='';if(used)heat=null;
@@ -411,7 +411,7 @@ const nClub=s=>{
 const NAMEL=/^(?:фио|ф\.?\s?и\.?\s?о?\.?(?:\s+участника)?)$/i;
 const MON={января:1,февраля:2,марта:3,апреля:4,мая:5,июня:6,июля:7,августа:8,сентября:9,октября:10,ноября:11,декабря:12};
 const ruDate=s=>{const m=String(s??'').match(/(\d{1,2})(?:\s*[-–]\s*(\d{1,2}))?\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+(\d{4})/i);if(!m)return '';const p=n=>String(n).padStart(2,'0');return (m[2]?p(m[1])+'-'+p(m[2]):p(m[1]))+'.'+p(MON[m[3].toLowerCase()])+'.'+m[4]};
-const defDistOf=a=>{for(const r of a.slice(0,12)){if(!r||!r.some(c=>typeof c==='string'&&NAMEL.test(c.trim())))continue;const c=r.find((c,k)=>k>1&&typeof c==='string'&&DISTRE.test(c));if(c)return nDist(c)}return ''};
+const defDistOf=a=>{for(const r of a.slice(0,12)){if(!r||!(r.some(c=>typeof c==='string'&&NAMEL.test(c.trim()))||(r.filter((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c)).length===1&&r.some(c=>typeof c==='string'&&/^г\.?\s?р\.?$/i.test(c.trim())))))continue;const c=r.find((c,k)=>k>1&&typeof c==='string'&&DISTRE.test(c));if(c)return nDist(c)}return ''};
 const SEXW=/^(девочки|мальчики|девушки|юноши)$/i;
 const DISTRE=/^\s*(?:\d+\s*[хx×]\s*)?\d+\s*м?\s*(?:к\/п|н\/с|в\/с|брасс|батт|вольн|на\s+спине|комплекс|комлекс)/i;
 const HLAB=/г\.?\s?р|школ|город|результат|разряд|тренер|сумма|^в\.?\s?г/i;
@@ -425,7 +425,7 @@ function layoutAt(a,i){
   const r=a[i],h=r.map(c=>typeof c==='string'?c.trim().toLowerCase():''),at=re=>h.findIndex(x=>re.test(x));
   const C={name:at(NAMEL),yob:at(/^г\.?\s?р/),grp:at(/^(в\.?\s?г|возр)/),school:at(/школ/),city:at(/город/),res:-1,rank:-1,rank2:-1,coach:at(/тренер/)};C.gnum=/^гр(?:уппа|\.)?$/.test(h[0])?0:-1;if(C.gnum===0&&C.yob===0)C.yob=h.findIndex((x,k)=>k>0&&/^г\.?\s?р/.test(x));
   if(C.name<0&&SEXW.test(h[1]||''))C.name=1;
-  if(C.name<0&&C.yob>0&&typeof r[C.yob-1]==='string'&&DISTRE.test(r[C.yob-1]))C.name=C.yob-1;      // колонка фамилий подписана дистанцией
+  if(C.name<0&&C.yob>0&&(r[C.yob-1]==null||r[C.yob-1]===''||(typeof r[C.yob-1]==='string'&&DISTRE.test(r[C.yob-1]))))C.name=C.yob-1;      // колонка фамилий подписана дистанцией
   const sum=at(/сумма|итого/),rs=h.map((x,k)=>/^результат/.test(x)?k:-1).filter(k=>k>=0);
   C.res=sum>=0?sum:(rs.length?rs[0]:-1);C.lab=C.res>=0;
   if(C.res<0){const dl=r.findIndex((c,k)=>k>1&&typeof c==='string'&&DISTRE.test(c));if(dl>=0)C.res=dl}
@@ -459,19 +459,20 @@ function parseResultsMatrix(a,defD){
   const clean=v=>v==null||String(v).trim()===''?null:String(v).replace(/\s+/g,' ').trim();
   for(let i=0;i<a.length;i++){
     const r=a[i];if(!r)continue;
-    const isH=r.some(c=>typeof c==='string'&&NAMEL.test(c.trim()))||(SEXW.test(String(r[1]??'').trim())&&r.some((c,k)=>k!==1&&typeof c==='string'&&(HLAB.test(c.trim())||DISTRE.test(c))));
+    const isH=r.some(c=>typeof c==='string'&&NAMEL.test(c.trim()))||(r.some((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c))&&r.some(c=>typeof c==='string'&&/^г\.?\s?р\.?$/i.test(c.trim())))||(SEXW.test(String(r[1]??'').trim())&&r.some((c,k)=>k!==1&&typeof c==='string'&&(HLAB.test(c.trim())||DISTRE.test(c))));
     if(isH){
       seenH=true;const L=layoutAt(a,i);if(L.name>=0&&L.yob>=0&&L.res>=0)C=(C&&!L.lab&&C.name===L.name&&C.yob===L.yob)?C:L;      // заголовок без подписи «результат» наследует раскладку предыдущего
       if(SEXW.test(String(r[1]??'').trim())){sex=sexWord(String(r[1]));blk++}
-      const dl=r.findIndex((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c));
-      if(dl>=0){dist=nDist(r[dl]);grp=''}
+      const dcs=r.filter((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c)),dl=r.findIndex((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c));
+      if(dcs.length>=3&&!dcs.some(c=>/\d\s*[хx×]\s*\d/i.test(c))&&C&&L&&/сумма|итого/i.test(r.map(x=>String(x??'')).join(' '))){const mm=String(dcs[0]).match(/^\s*(\d+)/);dist=dcs.length+'×'+(mm?mm[1]:'25')+' м комплексное плавание (раздельный старт)';grp=''}
+      else if(dl>=0){dist=nDist(r[dl]);grp=''}
       continue;
     }
     const Z=C||DEF,B=r[Z.name],cell=r[Z.res],G=typeof cell==='number'?String(cell):String(cell??'').trim(),ym=String(r[Z.yob]??'').match(/\d{4}/);
     const isath=typeof B==='string'&&!NAMEL.test(B.trim())&&!/^результат/i.test(G)&&(typeof r[0]==='number'||(G&&ym));
     if(isath){
       if(!dist||skip)continue;
-      R.push({row:i,dayN,date,dist,sex,blk,grp:grp||(Z.grp>=0&&typeof r[Z.grp]==='number'?r[Z.grp]+' в.г.':''),place:typeof r[numCol(r,Z)]==='number'?r[numCol(r,Z)]:null,fio:clean(B),yob:ym?+ym[0]:null,rank:nRank(r[Z.rank]),
+      R.push({row:i,dayN,date,dist,sex,blk,grp:(Z.grp>=0&&typeof r[Z.grp]==='string'&&/^вк$/i.test(r[Z.grp].trim()))||/\s+вк\s*$/i.test(B)?'вне конкурса':grp||(Z.grp>=0&&typeof r[Z.grp]==='number'?r[Z.grp]+' в.г.':''),place:typeof r[numCol(r,Z)]==='number'?r[numCol(r,Z)]:null,fio:clean(String(B).replace(/\s+вк\s*$/i,'')),yob:ym?+ym[0]:null,rank:nRank(r[Z.rank]),
         school:nClub(clean(r[Z.school])),city:clean(r[Z.city]),res:G,rank2:nRank(r[Z.rank2]),coach:clean(r[Z.coach])});
       continue;
     }
@@ -480,7 +481,7 @@ function parseResultsMatrix(a,defD){
     if(/^итогов/.test(tl)){skip=false;continue}
     if(!t||NAMEL.test(tl)||/^гл\./.test(tl)||/^\d{2}-\d{2}/.test(tl))continue;
     if(/день/.test(tl)){dayN=/^\s*2/.test(tl)?2:1;date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0]||date;continue}
-    if(/^\d\s*(?:в\.?\s*г|возр\.?\s*гр)\.?$/.test(tl)){grp=tl[0]+' в.г.';continue}
+    if(/^\d\s*(?:в\.?\s*г|воз(?:р)?\.?\s*гр)\.?$/.test(tl)){grp=tl[0]+' в.г.';continue}
     if(SEXW.test(tl)){sex=sexWord(tl);blk++;continue}
     if(!seenH&&!DISTRE.test(t))continue;
     dist=nDist(t);sex=grp='';
@@ -509,7 +510,7 @@ function parseResultsMatrix(a,defD){
     R.forEach(x=>{if(x.grp&&x.yob&&x.place!=null){const m=ymap.get(x.yob)||ymap.set(x.yob,new Map()).get(x.yob);m.set(x.grp,(m.get(x.grp)||0)+1)}});
     const yg=y=>{const m=ymap.get(y);return m?[...m].sort((p,q)=>q[1]-p[1])[0][0]:(y?y+' г.р.':'')};
     for(const x of R){
-      const hg=x.grp;
+      const hg=x.grp;if(hg==='вне конкурса')continue;
       if(x.place==null&&x.sec!=null){const g=yg(x.yob)||hg;if(g!==hg)bump(gn,x.dist+', '+x.sex);x.grp=g}
       else if(!hg){x.grp=yg(x.yob);bump(gn,x.dist+', '+x.sex)}
     }
@@ -525,6 +526,7 @@ function parseResultsMatrix(a,defD){
   D.forEach(x=>{const k=[x.dayN,x.dist,x.sex,x.grp].join('|');(G2.get(k)||G2.set(k,[]).get(k)).push(x)});
   for(const g of G2.values()){
     if(g.some(z=>z.bad)){g.forEach(z=>{z.mesto=z.sec!=null?z.place:null;if(z.bad)notes.push({t:'Проверить время',d:`${z.fio} — ${z.dist}, ${z.sex}, ${z.grp}: время «${z.res}» записано с секундами ≥ 60; место оставлено как в протоколе (${z.place}), в группе места не пересчитывались`})});continue}
+    if(g[0].grp==='вне конкурса'){g.forEach(z=>z.mesto=null);continue}      // вне конкурса мест нет
     g.filter(z=>z.sec!=null).sort((p,q)=>p.sec-q.sec||p.row-q.row).forEach((x,i)=>{if(x.place!=null&&x.place!==i+1)bump(pn,[x.dist,x.sex,x.grp].join(', '));x.mesto=i+1});
     g.forEach(z=>{if(z.sec==null)z.mesto=null});
   }
@@ -532,7 +534,8 @@ function parseResultsMatrix(a,defD){
   const order=[];D.forEach(x=>{const k=x.dayN+'|'+x.dist;if(!order.includes(k))order.push(k)});
   const gr={'Девочки':0,'Мальчики':1};
   D.sort((p,q)=>order.indexOf(p.dayN+'|'+p.dist)-order.indexOf(q.dayN+'|'+q.dist)||(gr[p.sex]??2)-(gr[q.sex]??2)||p.grp.localeCompare(q.grp)||(p.mesto??999)-(q.mesto??999)||p.row-q.row);
-  return {notes,meta:{title,dt,blocks},rows:D.map(x=>({date:x.date,dist:x.dist,sex:x.sex,grp:x.grp,pl:x.mesto,fio:x.fio,yob:x.yob,rank:x.rank,club:x.school,city:x.city,
+  const norank=!R.some(x=>x.rank);      // в протоколе нет колонки с имеющимся разрядом — изменение разряда не считаем
+  return {notes,meta:{title,dt,blocks},rows:D.map(x=>({norank,date:x.date,dist:x.dist,sex:x.sex,grp:x.grp,pl:x.mesto,fio:x.fio,yob:x.yob,rank:x.rank,club:x.school,city:x.city,
     res:x.sec!=null?(x.bad?x.res.replace(',',':'):x.sec/86400):null,rank2:x.sec!=null?x.rank2:null,coach:x.coach,st:x.st,
     team:x.school||(x.city?x.city+' (школа не указана)':'—')}))};
 }
@@ -675,7 +678,7 @@ const RKL={'1':'Вз1','2':'Вз2','3':'Вз3','1юн.':'Юн1','2юн.':'Юн2'
 const rkL=x=>RKL[x]||x;
 const rkS=v=>v==null||String(v).trim()===''?'':rkL(rkN(v));
 function rankChange(r){
-  if(r.st||typeof r.res!=='number')return null;
+  if(r.st||r.norank||typeof r.res!=='number')return null;
   const held=rkN(r.rank),nm=NORMS[r.sex],mm=dkey(r.dist).match(/^(\d+) м (.+)$/),row=nm&&mm&&nm[mm[2]+' '+mm[1]];
   let done,src;
   if(row){const s=Math.round(r.res*8640000)/100;done='б/р';for(let i=0;i<8;i++)if(row[i]!=null&&s<=row[i]+1e-6){done=RK[i];break}src='n'}
