@@ -118,6 +118,8 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 .csec{grid-column:1/-1;margin:14px 2px 0;font-size:16px;font-weight:800;color:var(--ink)}
 .csec:first-child{margin-top:0}
 .ccard.upc{cursor:default;background:var(--upbg);border-color:var(--upline);border-left-color:var(--upline)}
+.legs{font-size:12px;font-weight:400;color:var(--mute);margin-top:3px;white-space:normal;min-width:190px}
+.legs b{color:var(--ink);font-weight:600}
 .ccard.pre{background:var(--prebg);border-color:var(--preline);border-left-color:var(--preline)}
 .ccard.pre .cdate{color:var(--pre)}
 .ccard.pre .badge{background:var(--preline);color:#fff}
@@ -404,7 +406,7 @@ const nClub=s=>{
   if(k==='шериф')return 'СК "Шериф"';
   if(k==='сдюшор'||k==='тсдюшор')return 'ТСДЮШОР';
   if(/^[mм][eе][cс]$/.test(k))return 'MEC';
-  if(k==='арго'||k==='argo')return 'СК Арго';
+  if(k==='арго'||k==='argo'||k==='цпп арго'||k==='цпп argo')return 'СК Арго';
   return m?'SS-'+m[1]:t.replace('"шериф"','"Шериф"');
 };
 // ---- общие помощники для таблиц с разной раскладкой колонок
@@ -455,7 +457,7 @@ function parseResultsMatrix(a,defD){
     if(!title&&/протокол/i.test(c))title=c.trim();
   }
   const notes=[],R=[],DEF={name:1,yob:2,rank:3,school:4,city:5,res:6,rank2:7,coach:8,grp:-1};
-  let dayN=1,date=/^\d{2}\.\d{2}\.\d{4}$/.test(dt)?dt:'',dist=defD||'',sex='',grp='',skip=false,blk=0,C=null,seenH=false;
+  let dayN=1,date=/^\d{2}\.\d{2}\.\d{4}$/.test(dt)?dt:'',dist=defD||'',sex='',grp='',skip=false,blk=0,C=null,seenH=false,legCols=null;
   const clean=v=>v==null||String(v).trim()===''?null:String(v).replace(/\s+/g,' ').trim();
   for(let i=0;i<a.length;i++){
     const r=a[i];if(!r)continue;
@@ -464,8 +466,9 @@ function parseResultsMatrix(a,defD){
       seenH=true;const L=layoutAt(a,i);if(L.name>=0&&L.yob>=0&&L.res>=0)C=(C&&!L.lab&&C.name===L.name&&C.yob===L.yob)?C:L;      // заголовок без подписи «результат» наследует раскладку предыдущего
       if(SEXW.test(String(r[1]??'').trim())){sex=sexWord(String(r[1]));blk++}
       const dcs=r.filter((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c)),dl=r.findIndex((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c));
-      if(dcs.length>=3&&!dcs.some(c=>/\d\s*[хx×]\s*\d/i.test(c))&&C&&L&&/сумма|итого/i.test(r.map(x=>String(x??'')).join(' '))){const mm=String(dcs[0]).match(/^\s*(\d+)/);dist=dcs.length+'×'+(mm?mm[1]:'25')+' м комплексное плавание (раздельный старт)';grp=''}
-      else if(dl>=0){dist=nDist(r[dl]);grp=''}
+      if(dcs.length>=3&&!dcs.some(c=>/\d\s*[хx×]\s*\d/i.test(c))&&C&&L&&/сумма|итого/i.test(r.map(x=>String(x??'')).join(' '))){const mm=String(dcs[0]).match(/^\s*(\d+)/);dist=dcs.length+'×'+(mm?mm[1]:'25')+' м комплексное плавание (раздельный старт)';grp='';
+        legCols=r.map((c,k)=>{if(k<2||typeof c!=='string'||!DISTRE.test(c))return null;const t=c.toLowerCase();return {c:k,n:/батт/.test(t)?'Батт':/н\/с|спин/.test(t)?'Спина':/брасс/.test(t)?'Брасс':'В/с'}}).filter(Boolean)}
+      else if(dl>=0){dist=nDist(r[dl]);grp='';legCols=null}
       continue;
     }
     const Z=C||DEF,B=r[Z.name],cell=r[Z.res],G=typeof cell==='number'?String(cell):String(cell??'').trim(),ym=String(r[Z.yob]??'').match(/\d{4}/);
@@ -473,7 +476,7 @@ function parseResultsMatrix(a,defD){
     if(isath){
       if(!dist||skip)continue;
       R.push({row:i,dayN,date,dist,sex,blk,grp:(Z.grp>=0&&typeof r[Z.grp]==='string'&&/^вк$/i.test(r[Z.grp].trim()))||/\s+вк\s*$/i.test(B)?'вне конкурса':grp||(Z.grp>=0&&typeof r[Z.grp]==='number'?r[Z.grp]+' в.г.':''),place:typeof r[numCol(r,Z)]==='number'?r[numCol(r,Z)]:null,fio:clean(String(B).replace(/\s+вк\s*$/i,'')),yob:ym?+ym[0]:null,rank:nRank(r[Z.rank]),
-        school:nClub(clean(r[Z.school])),city:clean(r[Z.city]),res:G,rank2:nRank(r[Z.rank2]),coach:clean(r[Z.coach])});
+        legs:legCols?legCols.map(l=>{const v=r[l.c];return {n:l.n,v:typeof v==='number'?v:(v==null||String(v).trim()===''?null:String(v).trim())}}):null,school:nClub(clean(r[Z.school])),city:clean(r[Z.city]),res:G,rank2:nRank(r[Z.rank2]),coach:clean(r[Z.coach])});
       continue;
     }
     const t=[r[0],r[1],r[2],r[3]].map(x=>typeof x==='string'?x.trim():'').find(x=>x&&!/^№/.test(x)&&!/^\d+$/.test(x))||'',tl=t.toLowerCase();
@@ -535,7 +538,7 @@ function parseResultsMatrix(a,defD){
   const gr={'Девочки':0,'Мальчики':1};
   D.sort((p,q)=>order.indexOf(p.dayN+'|'+p.dist)-order.indexOf(q.dayN+'|'+q.dist)||(gr[p.sex]??2)-(gr[q.sex]??2)||p.grp.localeCompare(q.grp)||(p.mesto??999)-(q.mesto??999)||p.row-q.row);
   const norank=!R.some(x=>x.rank);      // в протоколе нет колонки с имеющимся разрядом — изменение разряда не считаем
-  return {notes,meta:{title,dt,blocks},rows:D.map(x=>({norank,date:x.date,dist:x.dist,sex:x.sex,grp:x.grp,pl:x.mesto,fio:x.fio,yob:x.yob,rank:x.rank,club:x.school,city:x.city,
+  return {notes,meta:{title,dt,blocks},rows:D.map(x=>({norank,legs:x.legs,date:x.date,dist:x.dist,sex:x.sex,grp:x.grp,pl:x.mesto,fio:x.fio,yob:x.yob,rank:x.rank,club:x.school,city:x.city,
     res:x.sec!=null?(x.bad?x.res.replace(',',':'):x.sec/86400):null,rank2:x.sec!=null?x.rank2:null,coach:x.coach,st:x.st,
     team:x.school||(x.city?x.city+' (школа не указана)':'—')}))};
 }
@@ -677,8 +680,8 @@ const rkN=v=>{if(v==null||String(v).trim()==='')return 'б/р';const t=String(v)
 const RKL={'1':'Вз1','2':'Вз2','3':'Вз3','1юн.':'Юн1','2юн.':'Юн2','3юн.':'Юн3'};
 const rkL=x=>RKL[x]||x;
 const rkS=v=>v==null||String(v).trim()===''?'':rkL(rkN(v));
-function rankChange(r){
-  if(r.st||r.norank||typeof r.res!=='number')return null;
+function rankChange(r,force){
+  if(r.st||(r.norank&&!force)||typeof r.res!=='number')return null;
   const held=rkN(r.rank),nm=NORMS[r.sex],mm=dkey(r.dist).match(/^(\d+) м (.+)$/),row=nm&&mm&&nm[mm[2]+' '+mm[1]];
   let done,src;
   if(row){const s=Math.round(r.res*8640000)/100;done='б/р';for(let i=0;i<8;i++)if(row[i]!=null&&s<=row[i]+1e-6){done=RK[i];break}src='n'}
@@ -701,7 +704,14 @@ function nrCell(o,vals){
   return '<td><b>'+esc(rkL(n.cur))+'</b>'+(n.next?' → '+esc(rkL(n.next))+'<br><span class="mu">не хватает '+n.gap.toFixed(2).replace('.',',')+' с · норматив '+fS(n.norm)+'</span>':' <span class="mu">· высший разряд по таблице</span>')+'</td>';
 }
 const isUp=r=>{const c=rankChange(r);return !!c&&c.d>0};
+const legsHtml=r=>r.legs&&r.legs.length?'<div class="legs">'+r.legs.map(l=>esc(l.n)+' <b>'+(typeof l.v==='number'?String(l.v.toFixed(2)).replace('.',','):esc(l.v==null?'—':({'ня':'н/я','дк':'д/к'})[l.v]||l.v))+'</b>').join(' · ')+'</div>':'';
 function rcell(r){
+  if(r.norank){      // в протоколе нет имеющегося разряда: показываем присвоенный по протоколу и сверяем с таблицей нормативов
+    if(r.st||!r.rank2)return '';
+    const p=rkN(r.rank2);if(p==='б/р')return '<span class="mu">—</span>';
+    const k=rankChange(r,true);
+    return `<span class="eq"><b>${esc(rkL(p))}</b></span>`+(k&&k.done!==p?` <span class="warn" title="По таблице нормативов: ${esc(rkL(k.done))}">⚠</span>`:'');
+  }
   const c=rankChange(r);
   if(!c)return '';
   if(c.done==='б/р'&&c.held==='б/р')return '<span class="mu">—</span>'+(c.cmp?` <span class="warn" title="В протоколе указано: ${esc(rkL(c.cmp))}">⚠</span>`:'');
@@ -858,7 +868,7 @@ function render(){
     const k=r.date+r.dist+r.sex+r.grp;
     if(k!==last){last=k;h+=`<tr class="ev"><td colspan="8">${esc(r.dist)}<span>${esc(r.sex)}, ${esc(r.grp)} · ${esc(r.date)}</span></td></tr>`}
     const c=r.pl?(r.pl<4?' p'+r.pl:''):' st';
-    h+=`<tr class="${c.trim()}"><td class="pl">${r.pl??''}</td><td><a class="nm" data-n="${esc(r.fio)}">${esc(r.fio)}</a></td><td>${esc(r.yob)}</td><td>${esc(r.club||'')}</td><td>${esc(r.city||'')}</td><td class="t">${r.st?esc(r.st):esc(fmtT(r.res))}</td><td>${rcell(r)}</td><td>${esc(r.coach||'')}</td></tr>`;
+    h+=`<tr class="${c.trim()}"><td class="pl">${r.pl??''}</td><td><a class="nm" data-n="${esc(r.fio)}">${esc(r.fio)}</a></td><td>${esc(r.yob)}</td><td>${esc(r.club||'')}</td><td>${esc(r.city||'')}</td><td class="t">${r.st?esc(r.st):esc(fmtT(r.res))}${legsHtml(r)}</td><td>${rcell(r)}</td><td>${esc(r.coach||'')}</td></tr>`;
   }
   $('tb').innerHTML=h||'<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mute)">Ничего не найдено. Измените фильтры.</td></tr>';
   $('cnt').textContent='Показано записей: '+out.length+' · повысили разряд: '+out.filter(isUp).length;
