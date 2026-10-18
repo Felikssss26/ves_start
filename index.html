@@ -586,7 +586,7 @@ function showNotes(){
 
 // ---- несколько соревнований: хранение и выбор текущего
 function addComp(file,rr,notes,meta){
-  const base=file.replace(/\.[^.]+$/,''),src=(meta&&meta.dt)||(rr[0]&&rr[0].date)||'',m=src.match(/(\d{2})(?:-\d{2})?\.(\d{2})\.(\d{4})/);
+  const base=file.replace(/\.[^.]+$/,''),src=(meta&&meta.dt)||(rr[0]&&rr[0].date)||'',m=src.match(/(\d{2})(?:\s*[-–—]\s*\d{2})?\.(\d{2})\.(\d{4})/);
   let label=base;
   if(meta&&(meta.title||meta.dt))label=[(meta.title||'').replace(/^итоговый\s+протокол\s*/i,'').trim(),meta.dt].filter(Boolean).join(', ');
   else if(m)label=base+' ('+m[0]+')';
@@ -1082,7 +1082,7 @@ async function openCompetition(id,push=true){
       for(const f of o.files){if(!o.user&&!(f.kinds||[f.kind]).includes('itog'))continue;
         try{const p=await getParsed(f.name,o.user,(f.entryDist||f.seedDist)?{entryDist:f.entryDist,seedDist:f.seedDist}:undefined);if(p&&p.res)addComp(p.name,p.res.rows,p.res.notes,p.res.meta)}catch(x){}}
     }
-    for(const k of comps){const o=allCat().find(z=>z.files.some(f=>f.name===k.file));if(o&&!o.user)k.label=[o.short||o.title,o.date].filter(Boolean).join(', ')}
+    for(const k of comps){const o=allCat().find(z=>z.files.some(f=>f.name===k.file));if(o&&!o.user){k.label=[o.short||o.title,o.date].filter(Boolean).join(', ');const t=/^\d{4}-\d{2}-\d{2}/.test(o.start||'')?Date.parse(o.start.slice(0,10)):NaN;if(!isNaN(t))k.ts=t}}      // дата из каталога — основа хронологического порядка
     ents=Object.values(efiles).flat();starts=Object.values(sfiles).flat();
     if(mine.length){curFile=comps.filter(k=>mine.includes(k.file)).sort((x,y)=>y.ts-x.ts)[0].file;picked=true}
     pickCurrent();
