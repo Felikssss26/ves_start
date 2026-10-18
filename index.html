@@ -986,6 +986,10 @@ async function parseFile(f,opts){
     return {name:f.name,res:{rows:rr,notes:[],meta:null}};
   }
   const p=parseWorkbook(wb,f.name,opts);
+  {const S25=/^\s*25\s*м\s+(баттерфляй|на спине|брасс|вольный)/i,F50=/^\s*50\s*м\s+вольный/i,base=new Map();      // время 50 м в/с, продублированное на 25-метровки (заплывы комплекса 4×25), — не заявочное: убираем
+    [...p.ent,...p.st].forEach(x=>{const v=x.t!=null?x.t:x.seed;if(F50.test(x.dist)&&v!=null&&!base.has(x.key))base.set(x.key,v)});
+    p.st.forEach(x=>{if(S25.test(x.dist)&&x.seed!=null&&x.seed===base.get(x.key)){x.seed=null;x.seedOff=true}});
+    p.ent=p.ent.filter(x=>!(S25.test(x.dist)&&x.t!=null&&x.t===base.get(x.key)))}
   if(opts&&opts.seedDist){const sd=nDist(opts.seedDist);p.st.forEach(x=>{if(x.dist!==sd){x.seed=null;x.seedOff=true}})}      // заявочное время сохраняем только для указанной дистанции
   return {name:f.name,res:p.rows.length?{rows:p.rows,notes:p.notes,meta:p.meta}:undefined,st:p.st,ent:p.ent};
 }
