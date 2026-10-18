@@ -930,7 +930,8 @@ function openAth(n){
   const strokeOf=d=>/^\s*25\s*м\s+баттерфляй/i.test(d)?'Батт':/^\s*25\s*м\s+на спине/i.test(d)?'Спина':/^\s*25\s*м\s+брасс/i.test(d)?'Брасс':/^\s*25\s*м\s+вольный/i.test(d)?'В/с':null;
   const legNow=st=>{for(const r of a){const l=r.legs&&r.legs.find(x=>x.n===st);if(l&&typeof l.v==='number')return l.v}return null};
   const prevOf=dist=>{const st=strokeOf(dist);for(const c of prevC){const L=cRows(c).filter(r=>ik(r)===fk&&T(r)!=null&&(dkey(r.dist)===dkey(dist)||(st&&/^4×25.* — /.test(r.dist)&&r.dist.endsWith(' — '+st))));if(L.length){const b=L.reduce((x,y)=>T(y)<T(x)?y:x);return {t:T(b),lab:c.lab}}}return null};      // прошлый результат на такой же дистанции/заплыве в других протоколах
-  const tr=[...m.values()].sort((x,y)=>x.ord-y.ord).map(o=>{
+  const SPO=[/^\s*50\s*м\s+вольный/i,/^\s*4\s*[×хx]\s*25/i,/^\s*25\s*м\s+баттерфляй/i,/^\s*25\s*м\s+на спине/i,/^\s*25\s*м\s+брасс/i,/^\s*25\s*м\s+вольный/i],spr=d=>SPO.findIndex(r=>r.test(d)),isSp=cur&&/спринт/i.test(cur.lab||'');      // порядок для «Супер спринта»: 50 в/с, 4×25, затем 25 м батт, спина, брасс, в/с
+  const tr=[...m.values()].sort((x,y)=>{if(isSp){const p=spr(x.dist),q=spr(y.dist);if(p>=0&&q>=0)return p-q}return x.ord-y.ord}).map(o=>{
     const es=o.e&&o.e.t!=null?o.e.t:(o.s&&o.s.seed!=null?o.s.seed:null),st0=strokeOf(o.dist),lg=!o.r&&st0?legNow(st0):null,rs=o.r?resSec(o.r):lg,pv=prevOf(o.dist);
     let df='';if(es!=null&&rs!=null){const d=rs-es;df=`<span style="color:${d<=0?'var(--ok)':'var(--bad)'};font-weight:600">${d>0?'+':d<0?'−':''}${Math.abs(d).toFixed(2).replace('.',',')} с</span>`}
     let dp='';if(pv&&rs!=null){const d=rs-pv.t;dp=`<span style="color:${d<=0?'var(--ok)':'var(--bad)'};font-weight:600">${d>0?'+':d<0?'−':''}${Math.abs(d).toFixed(2).replace('.',',')} с</span>`}
