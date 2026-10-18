@@ -68,16 +68,29 @@ td.t{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
 tr.st td{color:var(--mute)}
 tr.ev .lbs{display:block;margin-top:6px;font-weight:400;font-size:12px}.lb{font:inherit;font-size:12px;font-weight:700;padding:4px 10px;margin:2px 4px 2px 0;border-radius:14px;border:1px solid var(--acc);background:var(--card);color:var(--acc);cursor:pointer}.lb.on{background:var(--acc);color:var(--card)}
 #up{position:fixed;right:16px;bottom:18px;width:46px;height:46px;border-radius:50%;border:0;background:var(--acc);color:var(--card);font-size:22px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.35);cursor:pointer;z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}#up.show{opacity:1;pointer-events:auto}
-/* сводные таблицы «Сравнение»: сетка + закреплённые первая строка и первый столбец */
-.cmpw{max-height:calc(100vh - 150px);overflow:auto}
-.cmpt{border-collapse:separate;border-spacing:0}
-.cmpt th,.cmpt td{border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
-.cmpt thead th{position:sticky;top:0;z-index:2;background:var(--accbg);border-top:1px solid var(--line);border-bottom:2px solid var(--acc)}
-.cmpt th:first-child,.cmpt td:first-child{position:sticky;left:0;z-index:1;background:var(--card);border-left:1px solid var(--line);min-width:150px;max-width:210px;white-space:normal}
-.cmpt thead th:first-child{z-index:3;background:var(--accbg)}
-.cmpt td:first-child{box-shadow:2px 0 0 var(--line)}
-.cmpt tbody tr:nth-child(even) td{background-image:linear-gradient(rgba(8,95,105,.045),rgba(8,95,105,.045))}
-.cmpt tr.p1 td:first-child,.cmpt tr.p2 td:first-child,.cmpt tr.p3 td:first-child{background:var(--card)}
+/* все таблицы: сетка + закреплённые первая строка и первый столбец */
+.wrap{max-height:calc(100vh - 150px);overflow:auto}
+dialog .wrap{max-height:62vh}
+.wrap table{border-collapse:separate;border-spacing:0}
+.wrap th,.wrap td{border-right:1px solid var(--line);border-bottom:1px solid var(--line);border-top:0}
+.wrap thead th{position:sticky;top:0;z-index:2;background:var(--accbg);border-top:1px solid var(--line);border-bottom:2px solid var(--acc)}
+.wrap th:first-child,.wrap td:first-child{position:sticky;left:0;z-index:1;background:var(--card);border-left:1px solid var(--line);box-shadow:2px 0 0 var(--line)}
+.wrap thead th:first-child{z-index:3;background:var(--accbg)}
+.wrap tbody tr:nth-child(even) td{background-image:linear-gradient(rgba(8,95,105,.045),rgba(8,95,105,.045))}
+.wrap tr.ev td{background:var(--ink)!important;background-image:none!important;border-color:transparent}
+:root[data-theme="dark"] .wrap tr.ev td{background:#0a1418!important}
+.wrap tr.p1 td.pl{background:var(--g)}.wrap tr.p2 td.pl{background:var(--s)}.wrap tr.p3 td.pl{background:var(--b)}
+.cmpt th:first-child,.cmpt td:first-child{min-width:150px;max-width:210px;white-space:normal}
+.evi{position:sticky;left:10px;width:max-content;max-width:min(calc(100vw - 60px),640px);white-space:normal}
+.wrap:has(#etb) th:first-child,.wrap:has(#etb) td.pl,.wrap:has(#stb) th:first-child,.wrap:has(#stb) td.pl{min-width:64px;width:64px;max-width:64px}
+.wrap:has(#etb) thead th:nth-child(2),.wrap:has(#etb) tr:not(.ev):not(.hp) td:nth-child(2),.wrap:has(#stb) thead th:nth-child(2),.wrap:has(#stb) tr:not(.ev):not(.hp) td:nth-child(2){position:sticky;left:64px;z-index:1;background:var(--card);box-shadow:2px 0 0 var(--line)}
+.wrap:has(#etb) thead th:nth-child(2),.wrap:has(#stb) thead th:nth-child(2){z-index:3;background:var(--accbg)}
+.wrap tr.hp>td{background:var(--accbg)!important;background-image:none!important}
+/* таблица результатов: закреплены «Место» и «ФИО» */
+#rtab th:first-child,#rtab td.pl{min-width:64px;width:64px;max-width:64px}
+#rtab thead th:nth-child(2),#rtab tr:not(.ev) td:nth-child(2){position:sticky;left:64px;z-index:1;background:var(--card);box-shadow:2px 0 0 var(--line)}
+#rtab thead th:nth-child(2){z-index:3;background:var(--accbg)}
+#rtab tbody tr:nth-child(even) td:nth-child(2){background-image:linear-gradient(rgba(8,95,105,.045),rgba(8,95,105,.045))}
 td.lc{padding:7px 5px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center}td.lc small{color:var(--mute);font-weight:700;margin-left:5px}
 td.lc.p1{background:var(--g)}td.lc.p2{background:var(--s)}td.lc.p3{background:var(--b)}td.lc.sel{box-shadow:inset 0 0 0 2px var(--acc)}
 th.lh{padding:8px 5px;cursor:pointer;text-align:center;color:var(--acc);text-decoration:underline dotted}th.lh.sel{background:var(--acc);color:var(--card)}#rtab.mx{min-width:820px}
@@ -832,7 +845,7 @@ function init(){
 }
 ['q','fd','fs','fg','fp','ft','fm','fu'].forEach(id=>$(id).addEventListener('input',render));
 ['wd','ws','wg'].forEach(id=>$(id).addEventListener('input',cards));
-(function(){const b=$('up');const t=()=>b.classList.toggle('show',(window.scrollY||document.documentElement.scrollTop)>300);addEventListener('scroll',t,{passive:true});b.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});t()})();
+(function(){const b=$('up');const t=()=>b.classList.toggle('show',(window.scrollY||document.documentElement.scrollTop)>300);addEventListener('scroll',t,{passive:true});b.onclick=()=>{window.scrollTo({top:0,behavior:'smooth'});document.querySelectorAll('.wrap').forEach(w=>w.scrollTo({top:0,behavior:'smooth'}))};t()})();
 $('rst').onclick=()=>{['q','fd','fs','fg','fp','ft'].forEach(i=>$(i).value='');$('fm').checked=false;$('fu').checked=false;render()};
 function showTab(t){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));
@@ -859,7 +872,7 @@ function renderSta(){
       h+=`<tr><td class="pl">${x.lane??''}</td><td><a class="nm" data-n="${esc(x.fio)}">${esc(x.fio)}</a></td><td>${esc(x.yob||'')}</td><td>${esc(x.grp)}</td><td>${esc(rkS(x.rank))}</td><td>${esc(x.team)}</td><td class="t">${x.seed!=null?esc(fS(x.seed)):(x.seedOff?'—':'без времени')}</td><td>${esc(x.coach)}</td></tr>`;
     }
   }
-  tb.innerHTML=h||'<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mute)">Ничего не найдено. Измените фильтры.</td></tr>';
+  tb.innerHTML=h||'<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mute)">Ничего не найдено. Измените фильтры.</td></tr>';fixRows(tb);
   $('scnt').textContent='Спортсменов: '+new Set(L.map(x=>x.key)).size+' · стартов: '+L.length+' · заплывов: '+new Set(L.filter(x=>x.heat!=null).map(x=>x.day+'|'+x.heat)).size;
 }
 function renderEnt(){
@@ -881,9 +894,10 @@ function renderEnt(){
       hs.reverse().forEach((x,j)=>{h+=`<tr class="hp"><td colspan="7">Заплыв ${j+1} из ${hc}</td></tr>`+x.map((e,i)=>row(e,i+1)).join('')});
     }else h+=a.map((e,i)=>row(e,i+1)).join('');
   }
-  tb.innerHTML=h||'<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--mute)">Ничего не найдено. Измените фильтры.</td></tr>';
+  tb.innerHTML=h||'<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--mute)">Ничего не найдено. Измените фильтры.</td></tr>';fixRows(tb);
   $('ecnt').textContent='Спортсменов: '+new Set(L.map(e=>e.key)).size+' · заявок на старты: '+L.length;
 }
+const fixRows=tb=>tb.querySelectorAll('tr.ev>td[colspan],tr.hp>td[colspan]').forEach(td=>{if(!td.firstElementChild||!td.firstElementChild.classList.contains('evi')){const d=document.createElement('div');d.className='evi';while(td.firstChild)d.appendChild(td.firstChild);td.appendChild(d)}});      // подписи групп остаются на виду при горизонтальной прокрутке
 let grpList=[];
 function render(){
   const q=$('q').value.trim().toLowerCase(),f={date:$('fd').value,dist:$('fs').value,sex:$('fg').value,grp:$('fp').value,team:$('ft').value},m=$('fm').checked,u=$('fu').checked;
@@ -898,7 +912,7 @@ function render(){
     const c=r.pl?(r.pl<4?' p'+r.pl:''):' st';
     h+=`<tr class="${c.trim()}"><td class="pl">${r.pl??''}</td><td><a class="nm" data-n="${esc(r.fio)}">${esc(r.fio)}</a></td><td>${esc(r.yob)}</td><td>${esc(r.club||'')}</td><td>${esc(r.city||'')}</td><td class="t">${r.st?esc(r.st):esc(fmtT(r.res))}${legsHtml(r)}</td><td>${rcell(r)}</td><td>${esc(r.coach||'')}</td></tr>`;
   }
-  $('tb').innerHTML=h||'<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mute)">Ничего не найдено. Измените фильтры.</td></tr>';
+  $('tb').innerHTML=h||'<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mute)">Ничего не найдено. Измените фильтры.</td></tr>';fixRows($('tb'));
   $('cnt').textContent='Показано записей: '+out.length+' · повысили разряд: '+out.filter(isUp).length;
 }
 function openLeg(gi,n){      // окно: группа ранжирована только по одному заплыву комплекса
