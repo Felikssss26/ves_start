@@ -845,7 +845,7 @@ function init(){
 }
 ['q','fd','fs','fg','fp','ft','fm','fu'].forEach(id=>$(id).addEventListener('input',render));
 ['wd','ws','wg'].forEach(id=>$(id).addEventListener('input',cards));
-(function(){const b=$('up');const t=()=>b.classList.toggle('show',(window.scrollY||document.documentElement.scrollTop)>300);addEventListener('scroll',t,{passive:true});b.onclick=()=>{window.scrollTo({top:0,behavior:'smooth'});document.querySelectorAll('.wrap').forEach(w=>w.scrollTo({top:0,behavior:'smooth'}))};t()})();
+(function(){const b=$('up');const y=()=>Math.max(window.scrollY||document.documentElement.scrollTop||0,...[...document.querySelectorAll('.wrap')].filter(w=>w.offsetParent&&!w.closest('dialog')).map(w=>w.scrollTop));const t=()=>b.classList.toggle('show',y()>300);document.addEventListener('scroll',t,{capture:true,passive:true});window.addEventListener('resize',t);b.onclick=()=>{window.scrollTo({top:0,behavior:'smooth'});document.querySelectorAll('.wrap').forEach(w=>w.scrollTo({top:0,behavior:'smooth'}))};t()})();      // кнопка «Наверх»: реагирует и на прокрутку страницы, и на прокрутку внутри таблицы
 $('rst').onclick=()=>{['q','fd','fs','fg','fp','ft'].forEach(i=>$(i).value='');$('fm').checked=false;$('fu').checked=false;render()};
 function showTab(t){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));
