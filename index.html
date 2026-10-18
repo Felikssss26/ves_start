@@ -921,9 +921,9 @@ function openAth(n){
   const k=nk(n),a=rows.filter(r=>nk(r.fio)===k),en=ents.filter(x=>x.key===k),sa=starts.filter(x=>x.key===k);
   if(!a.length&&!en.length&&!sa.length)return;
   const f=a[0]||en[0]||sa[0],md=[0,0,0];a.forEach(r=>{if(r.pl>=1&&r.pl<=3)md[r.pl-1]++});
-  const m=new Map();
-  en.forEach(x=>m.set(dkey(x.dist),{dist:x.dist,day:x.day+' день',ord:x.day*100+x.ord,e:x}));
-  sa.forEach(x=>{const o=m.get(dkey(x.dist))||m.set(dkey(x.dist),{dist:x.dist,day:x.day+' день',ord:x.day*100+x.ev}).get(dkey(x.dist));o.s=x});
+  const m=new Map(),ds=[...new Set(rows.map(r=>r.date).filter(Boolean))].sort((x,y)=>x.split('.').reverse().join().localeCompare(y.split('.').reverse().join())),fb=((comps.find(c=>c.file===curFile)||{}).lab||'').split(', ').pop()||'—',dl=n=>ds[n-1]||(ds.length===1&&n===1?ds[0]:ds.length?n+' день':fb);      // колонка «День»: везде дата, если она известна
+  en.forEach(x=>m.set(dkey(x.dist),{dist:x.dist,day:dl(x.day),ord:x.day*100+x.ord,e:x}));
+  sa.forEach(x=>{const o=m.get(dkey(x.dist))||m.set(dkey(x.dist),{dist:x.dist,day:dl(x.day),ord:x.day*100+x.ev}).get(dkey(x.dist));o.s=x});
   a.forEach(r=>{const o=m.get(dkey(r.dist))||m.set(dkey(r.dist),{dist:r.dist,day:r.date,ord:(r.date&&r.date.startsWith('26')?2:1)*100+90}).get(dkey(r.dist));o.r=r});
   const coach=(a[0]||{}).coach||(en[0]||{}).coach||(sa[0]||{}).coach||'—';
   const cur=comps.find(c=>c.file===curFile),prevC=comps.filter(c=>c!==cur&&(!cur||!cur.ts||!c.ts||c.ts<cur.ts)).sort((x,y)=>y.ts-x.ts),fk=fold(f.fio);
@@ -936,7 +936,7 @@ function openAth(n){
     let df='';if(es!=null&&rs!=null){const d=rs-es;df=`<span style="color:${d<=0?'var(--ok)':'var(--bad)'};font-weight:600">${d>0?'+':d<0?'−':''}${Math.abs(d).toFixed(2).replace('.',',')} с</span>`}
     let dp='';if(pv&&rs!=null){const d=rs-pv.t;dp=`<span style="color:${d<=0?'var(--ok)':'var(--bad)'};font-weight:600">${d>0?'+':d<0?'−':''}${Math.abs(d).toFixed(2).replace('.',',')} с</span>`}
     const res=lg!=null?fS(lg):o.r?((o.r.pl?o.r.pl+' место · ':'')+(o.r.st?o.r.st:fmtT(o.r.res))):'—';
-    return `<tr><td>${esc(o.day)}</td><td>${esc(o.dist)}${o.r?', '+esc(o.r.grp||''):''}</td><td class="t">${o.e||o.s?(es!=null?esc(fS(es)):(o.s&&o.s.seedOff&&!o.e?'—':'без времени')):'—'}</td><td>${o.s?(o.s.heat!=null?'Заплыв '+fh(o.s.heat)+(o.s.lane?', дор. '+o.s.lane:''):'не сформирован'):'—'}</td><td class="t">${esc(res)}</td><td class="t">${df}</td><td class="t">${pv?esc(fS(pv.t))+'<div class="legs" style="min-width:0">'+esc(pv.lab)+'</div>':'—'}</td><td class="t">${dp}</td><td>${o.r?rcell(o.r):''}</td></tr>`}).join('');
+    return `<tr><td>${esc(o.day||fb)}</td><td>${esc(o.dist)}${o.r?', '+esc(o.r.grp||''):''}</td><td class="t">${o.e||o.s?(es!=null?esc(fS(es)):(o.s&&o.s.seedOff&&!o.e?'—':'без времени')):'—'}</td><td>${o.s?(o.s.heat!=null?'Заплыв '+fh(o.s.heat)+(o.s.lane?', дор. '+o.s.lane:''):'не сформирован'):'—'}</td><td class="t">${esc(res)}</td><td class="t">${df}</td><td class="t">${pv?esc(fS(pv.t))+'<div class="legs" style="min-width:0">'+esc(pv.lab)+'</div>':'—'}</td><td class="t">${dp}</td><td>${o.r?rcell(o.r):''}</td></tr>`}).join('');
   $('dn').textContent=n;
   $('db').innerHTML=`<p style="margin:0 0 10px;color:var(--mute)">${esc(f.yob||'')} г.р. · ${esc(f.team)}${f.city?', '+esc(f.city):''}<br>Тренер: ${esc(coach)}${a.length?`<br>Медали: золото ${md[0]}, серебро ${md[1]}, бронза ${md[2]}`:''}</p><div class="wrap"><table style="min-width:900px"><thead><tr><th>День<th>Дистанция<th>Заявка<th>Заплыв<th>Итог<th>Итог к заявке<th>Прошлый результат<th>Итог к прошлому<th>Разряд</thead><tbody>${tr}</tbody></table></div>${comps.length>1?`<p style="margin:10px 0 0"><button class="btn" data-cmp="${esc(n)}">Динамика по соревнованиям</button></p>`:''}`;
   if(!$('dlg').open)$('dlg').showModal();
