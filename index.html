@@ -846,7 +846,7 @@ function renderSta(){
     for(const x of a){
       const hk=x.heat!=null?'h'+x.heat:'g'+x.grp;
       if(hk!==cur){cur=hk;h+=`<tr class="hp"><td colspan="8">${x.heat!=null?'Заплыв '+fh(x.heat):'Заплывы не сформированы · '+esc(x.grp)+' (в файле только заявочные времена)'}</td></tr>`}
-      h+=`<tr><td class="pl">${x.lane??''}</td><td><a class="nm" data-n="${esc(x.fio)}">${esc(x.fio)}</a></td><td>${esc(x.yob||'')}</td><td>${esc(x.grp)}</td><td>${esc(rkS(x.rank))}</td><td>${esc(x.team)}</td><td class="t">${x.seed!=null?esc(fS(x.seed)):'без времени'}</td><td>${esc(x.coach)}</td></tr>`;
+      h+=`<tr><td class="pl">${x.lane??''}</td><td><a class="nm" data-n="${esc(x.fio)}">${esc(x.fio)}</a></td><td>${esc(x.yob||'')}</td><td>${esc(x.grp)}</td><td>${esc(rkS(x.rank))}</td><td>${esc(x.team)}</td><td class="t">${x.seed!=null?esc(fS(x.seed)):(x.seedOff?'—':'без времени')}</td><td>${esc(x.coach)}</td></tr>`;
     }
   }
   tb.innerHTML=h||'<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mute)">Ничего не найдено. Измените фильтры.</td></tr>';
@@ -930,7 +930,7 @@ function openAth(n){
     const es=o.e&&o.e.t!=null?o.e.t:(o.s&&o.s.seed!=null?o.s.seed:null),rs=o.r?resSec(o.r):null;
     let df='';if(es!=null&&rs!=null){const d=rs-es;df=`<span style="color:${d<=0?'var(--ok)':'var(--bad)'};font-weight:600">${d>0?'+':d<0?'−':''}${Math.abs(d).toFixed(2).replace('.',',')} с</span>`}
     const res=o.r?((o.r.pl?o.r.pl+' место · ':'')+(o.r.st?o.r.st:fmtT(o.r.res))):'—';
-    return `<tr><td>${esc(o.day)}</td><td>${esc(o.dist)}${o.r?', '+esc(o.r.grp||''):''}</td><td class="t">${o.e||o.s?(es!=null?esc(fS(es)):'без времени'):'—'}</td><td>${o.s?(o.s.heat!=null?'Заплыв '+fh(o.s.heat)+(o.s.lane?', дор. '+o.s.lane:''):'не сформирован'):'—'}</td><td class="t">${esc(res)}</td><td class="t">${df}</td><td>${o.r?rcell(o.r):''}</td></tr>`}).join('');
+    return `<tr><td>${esc(o.day)}</td><td>${esc(o.dist)}${o.r?', '+esc(o.r.grp||''):''}</td><td class="t">${o.e||o.s?(es!=null?esc(fS(es)):(o.s&&o.s.seedOff&&!o.e?'—':'без времени')):'—'}</td><td>${o.s?(o.s.heat!=null?'Заплыв '+fh(o.s.heat)+(o.s.lane?', дор. '+o.s.lane:''):'не сформирован'):'—'}</td><td class="t">${esc(res)}</td><td class="t">${df}</td><td>${o.r?rcell(o.r):''}</td></tr>`}).join('');
   $('dn').textContent=n;
   $('db').innerHTML=`<p style="margin:0 0 10px;color:var(--mute)">${esc(f.yob||'')} г.р. · ${esc(f.team)}${f.city?', '+esc(f.city):''}<br>Тренер: ${esc(coach)}${a.length?`<br>Медали: золото ${md[0]}, серебро ${md[1]}, бронза ${md[2]}`:''}</p><div class="wrap"><table style="min-width:720px"><thead><tr><th>День<th>Дистанция<th>Заявка<th>Заплыв<th>Итог<th>Итог к заявке<th>Разряд</thead><tbody>${tr}</tbody></table></div>${comps.length>1?`<p style="margin:10px 0 0"><button class="btn" data-cmp="${esc(n)}">Динамика по соревнованиям</button></p>`:''}`;
   if(!$('dlg').open)$('dlg').showModal();
@@ -981,6 +981,7 @@ async function parseFile(f,opts){
     return {name:f.name,res:{rows:rr,notes:[],meta:null}};
   }
   const p=parseWorkbook(wb,f.name,opts);
+  if(opts&&opts.seedDist){const sd=nDist(opts.seedDist);p.st.forEach(x=>{if(x.dist!==sd){x.seed=null;x.seedOff=true}})}      // заявочное время сохраняем только для указанной дистанции
   return {name:f.name,res:p.rows.length?{rows:p.rows,notes:p.notes,meta:p.meta}:undefined,st:p.st,ent:p.ent};
 }
 async function getParsed(name,user,opts){
@@ -1036,7 +1037,7 @@ async function openCompetition(id,push=true){
     rows=[];ents=[];starts=[];efiles={};sfiles={};comps=[];resNotes=[];picked=false;curFile='';
     const errs=[],mine=[];
     for(const f of c.files){
-      try{const p=await getParsed(f.name,c.user,f.entryDist?{entryDist:f.entryDist}:undefined);if(!p)continue;
+      try{const p=await getParsed(f.name,c.user,(f.entryDist||f.seedDist)?{entryDist:f.entryDist,seedDist:f.seedDist}:undefined);if(!p)continue;
         if(p.res){addComp(p.name,p.res.rows,p.res.notes,p.res.meta);mine.push(p.name)}
         if(p.st&&p.st.length)sfiles[p.name]=p.st;
         if(p.ent&&p.ent.length)efiles[p.name]=p.ent;
@@ -1045,7 +1046,7 @@ async function openCompetition(id,push=true){
     for(const o of allCat()){
       if(o.id===id)continue;
       for(const f of o.files){if(!o.user&&!(f.kinds||[f.kind]).includes('itog'))continue;
-        try{const p=await getParsed(f.name,o.user,f.entryDist?{entryDist:f.entryDist}:undefined);if(p&&p.res)addComp(p.name,p.res.rows,p.res.notes,p.res.meta)}catch(x){}}
+        try{const p=await getParsed(f.name,o.user,(f.entryDist||f.seedDist)?{entryDist:f.entryDist,seedDist:f.seedDist}:undefined);if(p&&p.res)addComp(p.name,p.res.rows,p.res.notes,p.res.meta)}catch(x){}}
     }
     for(const k of comps){const o=allCat().find(z=>z.files.some(f=>f.name===k.file));if(o&&!o.user)k.label=[o.short||o.title,o.date].filter(Boolean).join(', ')}
     ents=Object.values(efiles).flat();starts=Object.values(sfiles).flat();
