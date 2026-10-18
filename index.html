@@ -66,6 +66,9 @@ td.pl{font-weight:800;text-align:center;width:44px}
 tr.p1 td.pl{background:var(--g)}tr.p2 td.pl{background:var(--s)}tr.p3 td.pl{background:var(--b)}
 td.t{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
 tr.st td{color:var(--mute)}
+td.lc{padding:7px 5px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:center}td.lc small{color:var(--mute);font-weight:700;margin-left:5px}
+td.lc.p1{background:var(--g)}td.lc.p2{background:var(--s)}td.lc.p3{background:var(--b)}td.lc.sel{box-shadow:inset 0 0 0 2px var(--acc)}
+th.lh{padding:8px 5px;cursor:pointer;text-align:center;color:var(--acc);text-decoration:underline dotted}th.lh.sel{background:var(--acc);color:var(--card)}#rtab.mx{min-width:820px}
 a.nm{color:var(--ink);text-decoration:none;font-weight:600;border-bottom:1px dotted var(--acc);cursor:pointer}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -174,7 +177,7 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
         <button class="btn ghost" id="rst" style="color:var(--ink)">Сбросить</button>
       </div>
       <div class="count" id="cnt"></div>
-      <div class="wrap"><table><thead><tr><th>Место<th>ФИО<th>Г.р.<th>Клуб<th>Город<th>Результат<th>Разряд: было → стало<th>Тренер</thead><tbody id="tb"></tbody></table></div>
+      <div class="wrap"><table id="rtab"><thead id="rth"><tr><th>Место<th>ФИО<th>Г.р.<th>Клуб<th>Город<th>Результат<th>Разряд: было → стало<th>Тренер</thead><tbody id="tb"></tbody></table></div>
     </section>
     <section id="v-win" class="hide"><div class="filters"><select id="wd"></select><select id="ws"></select><select id="wg"></select></div><div class="cards" id="cards"></div></section>
     <section id="v-med" class="hide"><div class="wrap"><table style="min-width:520px"><thead><tr><th>Клуб<th>Город<th>Золото<th>Серебро<th>Бронза<th>Всего<th>Участников</thead><tbody id="mb"></tbody></table></div></section>
@@ -584,7 +587,8 @@ const fold=n=>nk(n).replace(/[её]/g,'е').replace(/э/g,'е').replace(/и/g,'�
 const ik=r=>fold(r.fio);
 let people=new Map();
 const T=r=>typeof r.res==='number'?r.res*86400:null;
-const cRows=c=>c._cr||(c._cr=c.rows.flatMap(r=>[r].concat(r.legs?r.legs.filter(l=>typeof l.v==='number').map(l=>({...r,dist:r.dist.replace(/\s*\(раздельный старт\)/,'')+' — '+l.n,res:l.v/86400,pl:null,st:null,legs:null,rank:null,rank2:null,leg:true})):[])));      // для сравнения: отрезки 4×25 как отдельные дистанции
+const dupLeg=/^\s*25\s*м\s+(баттерфляй|на спине|брасс|вольный стиль)\s*$/i;
+const cRows=c=>c._cr||(c._cr=(c.rows.some(r=>r.legs)?c.rows.filter(r=>!dupLeg.test(r.dist)):c.rows).flatMap(r=>[r].concat(r.legs?r.legs.filter(l=>typeof l.v==='number').map(l=>({...r,dist:r.dist.replace(/\s*\(раздельный старт\)/,'')+' — '+l.n,res:l.v/86400,pl:null,st:null,legs:null,rank:null,rank2:null,leg:true})):[])));      // для сравнения: отрезки 4×25 как отдельные дистанции
 const dS=d=>(d>0?'+':d<0?'−':'')+Math.abs(d).toFixed(2).replace('.',',')+' с';
 const med=a=>a.length?(a.length%2?a[(a.length-1)/2]:(a[a.length/2-1]+a[a.length/2])/2):null;
 function renderCmp(){
@@ -866,19 +870,25 @@ function renderEnt(){
 }
 function render(){
   const q=$('q').value.trim().toLowerCase(),f={date:$('fd').value,dist:$('fs').value,sex:$('fg').value,grp:$('fp').value,team:$('ft').value},m=$('fm').checked,u=$('fu').checked;
-  const L=$('fl').value,legPl=new Map();
-  if(L){const G=new Map();rows.forEach(r=>{if(r.legs&&r.grp!=='вне конкурса'){const l=r.legs.find(x=>x.n===L);if(l&&typeof l.v==='number'){const k=r.date+r.dist+r.sex+r.grp;(G.get(k)||G.set(k,[]).get(k)).push([r,l.v])}}});
-    G.forEach(a=>{a.sort((x,y)=>x[1]-y[1]);a.forEach((x,i)=>legPl.set(x[0],i>0&&x[1]===a[i-1][1]?legPl.get(a[i-1][0]):i+1))})}      // места по отдельному виду: в каждой группе по времени на этом отрезке
-  const E=r=>L&&r.legs?{...r,pl:legPl.get(r)??null,leg:r.legs.find(x=>x.n===L)||null,lg:true}:r;
+  const L=$('fl').value,SN=['Батт','Спина','Брасс','В/с'],LP={};
+  SN.forEach(n=>{const mp=LP[n]=new Map(),G=new Map();rows.forEach(r=>{if(r.legs&&r.grp!=='вне конкурса'){const l=r.legs.find(x=>x.n===n);if(l&&typeof l.v==='number'){const k=r.date+r.dist+r.sex+r.grp;(G.get(k)||G.set(k,[]).get(k)).push([r,l.v])}}});
+    G.forEach(a=>{a.sort((x,y)=>x[1]-y[1]);a.forEach((x,i)=>mp.set(x[0],i>0&&x[1]===a[i-1][1]?mp.get(a[i-1][0]):i+1))})});      // места по каждому виду: в группе по времени на этом отрезке
+  const legPl=L?LP[L]:new Map();
+  const E=r=>L&&r.legs?{...r,__o:r,sp:r.pl,pl:legPl.get(r)??null,leg:r.legs.find(x=>x.n===L)||null,lg:true}:r;
   let out=rows.filter(r=>(!f.date||r.date===f.date)&&(!f.dist||r.dist===f.dist)&&(!f.sex||r.sex===f.sex)&&(!f.grp||r.grp===f.grp)&&(!f.team||r.team===f.team)&&(!u||isUp(r))&&(!q||[r.fio,r.club,r.coach,r.city].join(' ').toLowerCase().includes(q))).map(E);
   if(L){const gi=new Map();out.forEach(r=>{const k=r.date+r.dist+r.sex+r.grp;if(!gi.has(k))gi.set(k,gi.size)});
     out=out.map((r,i)=>[r,i]).sort((a,b)=>{const x=a[0],y=b[0],kx=gi.get(x.date+x.dist+x.sex+x.grp),ky=gi.get(y.date+y.dist+y.sex+y.grp);return kx-ky||(x.lg&&y.lg?(x.pl??1e9)-(y.pl??1e9):0)||a[1]-b[1]}).map(a=>a[0])}
   if(m)out=out.filter(r=>r.pl>=1&&r.pl<=3);
+  const mx=out.length>0&&out.every(r=>r.legs),NC=mx?10:8;
+  $('rtab').classList.toggle('mx',mx);
+  $('rth').innerHTML=mx?'<tr><th>Место<th>ФИО<th>Г.р.<th>Клуб'+SN.map(n=>'<th class="lh'+(L===n?' sel':'')+'" data-lg="'+n+'" title="Ранжировать по виду: '+n+'">'+n).join('')+'<th class="lh'+(L?'':' sel')+'" data-lg="" title="Ранжировать по сумме">Сумма<th>Тренер':'<tr><th>Место<th>ФИО<th>Г.р.<th>Клуб<th>Город<th>Результат<th>Разряд: было → стало<th>Тренер';
   let h='',last='';
   for(const r of out){
     const k=r.date+r.dist+r.sex+r.grp;
-    if(k!==last){last=k;h+=`<tr class="ev"><td colspan="8">${esc(r.dist)}<span>${esc(r.sex)}, ${esc(r.grp)} · ${esc(r.date)}${r.lg?' · зачёт: '+esc(L):''}</span></td></tr>`}
+    if(k!==last){last=k;h+=`<tr class="ev"><td colspan="${NC}">${esc(r.dist)}<span>${esc(r.sex)}, ${esc(r.grp)} · ${esc(r.date)}${r.lg?' · зачёт: '+esc(L):''}</span></td></tr>`}
     const c=r.pl?(r.pl<4?' p'+r.pl:''):' st';
+    if(mx){const lv=v=>typeof v==='number'?esc(fS(v)):esc(v==null?'—':({'ня':'н/я','дк':'д/к'})[v]||v),sumT=r.st?esc(r.st):esc(fmtT(r.res)),sp=r.lg?r.sp:r.pl;
+      h+=`<tr class="${c.trim()}"><td class="pl">${r.pl??''}</td><td><a class="nm" data-n="${esc(r.fio)}">${esc(r.fio)}</a></td><td>${esc(r.yob)}</td><td>${esc(r.club||'')}</td>`+SN.map(n=>{const l=r.legs.find(x=>x.n===n),p=l&&typeof l.v==='number'?LP[n].get(r.__o||r):null;return `<td class="lc${p&&p<4?' p'+p:''}${L===n?' sel':''}"><b>${lv(l&&l.v)}</b>${p?'<small>'+p+'</small>':''}</td>`}).join('')+`<td class="lc t${sp&&sp<4?' p'+sp:''}${L?'':' sel'}"><b>${sumT}</b>${sp?'<small>'+sp+'</small>':''}</td><td>${esc(r.coach||'')}</td></tr>`;continue}
     h+=`<tr class="${c.trim()}"><td class="pl">${r.pl??''}</td><td><a class="nm" data-n="${esc(r.fio)}">${esc(r.fio)}</a></td><td>${esc(r.yob)}</td><td>${esc(r.club||'')}</td><td>${esc(r.city||'')}</td><td class="t">${r.lg?(r.leg&&typeof r.leg.v==='number'?esc(fS(r.leg.v)):esc(r.leg&&r.leg.v!=null?({'ня':'н/я','дк':'д/к'})[r.leg.v]||r.leg.v:'—'))+legsHtml(r,'Сумма <b>'+(r.st?esc(r.st):esc(fmtT(r.res)))+'</b> · ',L):(r.st?esc(r.st):esc(fmtT(r.res)))+legsHtml(r)}</td><td>${r.lg?'':rcell(r)}</td><td>${esc(r.coach||'')}</td></tr>`;
   }
   $('tb').innerHTML=h||'<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mute)">Ничего не найдено. Измените фильтры.</td></tr>';
@@ -916,7 +926,7 @@ function openAth(n){
   $('db').innerHTML=`<p style="margin:0 0 10px;color:var(--mute)">${esc(f.yob||'')} г.р. · ${esc(f.team)}${f.city?', '+esc(f.city):''}<br>Тренер: ${esc(coach)}${a.length?`<br>Медали: золото ${md[0]}, серебро ${md[1]}, бронза ${md[2]}`:''}</p><div class="wrap"><table style="min-width:720px"><thead><tr><th>День<th>Дистанция<th>Заявка<th>Заплыв<th>Итог<th>Итог к заявке<th>Разряд</thead><tbody>${tr}</tbody></table></div>${comps.length>1?`<p style="margin:10px 0 0"><button class="btn" data-cmp="${esc(n)}">Динамика по соревнованиям</button></p>`:''}`;
   if(!$('dlg').open)$('dlg').showModal();
 }
-document.addEventListener('click',e=>{const d=e.target.dataset||{};if(d.n)openAth(d.n);if(d.cmp){if($('dlg').open)$('dlg').close();$('cm').value='a';$('ca').value=d.cmp;showTab('cmp');renderCmp()}});
+document.addEventListener('click',e=>{const lh=e.target.closest&&e.target.closest('th[data-lg]');if(lh){$('fl').value=lh.dataset.lg;render();return}const d=e.target.dataset||{};if(d.n)openAth(d.n);if(d.cmp){if($('dlg').open)$('dlg').close();$('cm').value='a';$('ca').value=d.cmp;showTab('cmp');renderCmp()}});
 $('who').addEventListener('change',()=>{
   const v=nk($('who').value);if(!v)return;
   let p=names.filter(x=>nk(x)===v);if(!p.length)p=names.filter(x=>nk(x).includes(v));
