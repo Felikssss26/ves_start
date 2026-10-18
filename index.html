@@ -80,7 +80,7 @@ a.nm{color:var(--ink);text-decoration:none;font-weight:600;border-bottom:1px dot
 .pod i{font-style:normal;font-weight:800;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:none;color:var(--ink)}
 .pod .r{margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
 .pod small{display:block;color:var(--mute)}
-dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);width:min(680px,94vw);padding:0}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);width:min(960px,96vw);padding:0}
 dialog::backdrop{background:rgba(0,0,0,.5)}
 dialog header{background:var(--accbg);color:var(--ink);justify-content:space-between}
 dialog h2{margin:0;font-size:16px}
@@ -926,13 +926,18 @@ function openAth(n){
   sa.forEach(x=>{const o=m.get(dkey(x.dist))||m.set(dkey(x.dist),{dist:x.dist,day:x.day+' день',ord:x.day*100+x.ev}).get(dkey(x.dist));o.s=x});
   a.forEach(r=>{const o=m.get(dkey(r.dist))||m.set(dkey(r.dist),{dist:r.dist,day:r.date,ord:(r.date&&r.date.startsWith('26')?2:1)*100+90}).get(dkey(r.dist));o.r=r});
   const coach=(a[0]||{}).coach||(en[0]||{}).coach||(sa[0]||{}).coach||'—';
+  const cur=comps.find(c=>c.file===curFile),prevC=comps.filter(c=>c!==cur&&(!cur||!cur.ts||!c.ts||c.ts<cur.ts)).sort((x,y)=>y.ts-x.ts),fk=fold(f.fio);
+  const strokeOf=d=>/^\s*25\s*м\s+баттерфляй/i.test(d)?'Батт':/^\s*25\s*м\s+на спине/i.test(d)?'Спина':/^\s*25\s*м\s+брасс/i.test(d)?'Брасс':/^\s*25\s*м\s+вольный/i.test(d)?'В/с':null;
+  const legNow=st=>{for(const r of a){const l=r.legs&&r.legs.find(x=>x.n===st);if(l&&typeof l.v==='number')return l.v}return null};
+  const prevOf=dist=>{const st=strokeOf(dist);for(const c of prevC){const L=cRows(c).filter(r=>ik(r)===fk&&T(r)!=null&&(dkey(r.dist)===dkey(dist)||(st&&/^4×25.* — /.test(r.dist)&&r.dist.endsWith(' — '+st))));if(L.length){const b=L.reduce((x,y)=>T(y)<T(x)?y:x);return {t:T(b),lab:c.lab}}}return null};      // прошлый результат на такой же дистанции/заплыве в других протоколах
   const tr=[...m.values()].sort((x,y)=>x.ord-y.ord).map(o=>{
-    const es=o.e&&o.e.t!=null?o.e.t:(o.s&&o.s.seed!=null?o.s.seed:null),rs=o.r?resSec(o.r):null;
+    const es=o.e&&o.e.t!=null?o.e.t:(o.s&&o.s.seed!=null?o.s.seed:null),st0=strokeOf(o.dist),lg=!o.r&&st0?legNow(st0):null,rs=o.r?resSec(o.r):lg,pv=prevOf(o.dist);
     let df='';if(es!=null&&rs!=null){const d=rs-es;df=`<span style="color:${d<=0?'var(--ok)':'var(--bad)'};font-weight:600">${d>0?'+':d<0?'−':''}${Math.abs(d).toFixed(2).replace('.',',')} с</span>`}
-    const res=o.r?((o.r.pl?o.r.pl+' место · ':'')+(o.r.st?o.r.st:fmtT(o.r.res))):'—';
-    return `<tr><td>${esc(o.day)}</td><td>${esc(o.dist)}${o.r?', '+esc(o.r.grp||''):''}</td><td class="t">${o.e||o.s?(es!=null?esc(fS(es)):(o.s&&o.s.seedOff&&!o.e?'—':'без времени')):'—'}</td><td>${o.s?(o.s.heat!=null?'Заплыв '+fh(o.s.heat)+(o.s.lane?', дор. '+o.s.lane:''):'не сформирован'):'—'}</td><td class="t">${esc(res)}</td><td class="t">${df}</td><td>${o.r?rcell(o.r):''}</td></tr>`}).join('');
+    let dp='';if(pv&&rs!=null){const d=rs-pv.t;dp=`<span style="color:${d<=0?'var(--ok)':'var(--bad)'};font-weight:600">${d>0?'+':d<0?'−':''}${Math.abs(d).toFixed(2).replace('.',',')} с</span>`}
+    const res=lg!=null?fS(lg):o.r?((o.r.pl?o.r.pl+' место · ':'')+(o.r.st?o.r.st:fmtT(o.r.res))):'—';
+    return `<tr><td>${esc(o.day)}</td><td>${esc(o.dist)}${o.r?', '+esc(o.r.grp||''):''}</td><td class="t">${o.e||o.s?(es!=null?esc(fS(es)):(o.s&&o.s.seedOff&&!o.e?'—':'без времени')):'—'}</td><td>${o.s?(o.s.heat!=null?'Заплыв '+fh(o.s.heat)+(o.s.lane?', дор. '+o.s.lane:''):'не сформирован'):'—'}</td><td class="t">${esc(res)}</td><td class="t">${df}</td><td class="t">${pv?esc(fS(pv.t))+'<div class="legs" style="min-width:0">'+esc(pv.lab)+'</div>':'—'}</td><td class="t">${dp}</td><td>${o.r?rcell(o.r):''}</td></tr>`}).join('');
   $('dn').textContent=n;
-  $('db').innerHTML=`<p style="margin:0 0 10px;color:var(--mute)">${esc(f.yob||'')} г.р. · ${esc(f.team)}${f.city?', '+esc(f.city):''}<br>Тренер: ${esc(coach)}${a.length?`<br>Медали: золото ${md[0]}, серебро ${md[1]}, бронза ${md[2]}`:''}</p><div class="wrap"><table style="min-width:720px"><thead><tr><th>День<th>Дистанция<th>Заявка<th>Заплыв<th>Итог<th>Итог к заявке<th>Разряд</thead><tbody>${tr}</tbody></table></div>${comps.length>1?`<p style="margin:10px 0 0"><button class="btn" data-cmp="${esc(n)}">Динамика по соревнованиям</button></p>`:''}`;
+  $('db').innerHTML=`<p style="margin:0 0 10px;color:var(--mute)">${esc(f.yob||'')} г.р. · ${esc(f.team)}${f.city?', '+esc(f.city):''}<br>Тренер: ${esc(coach)}${a.length?`<br>Медали: золото ${md[0]}, серебро ${md[1]}, бронза ${md[2]}`:''}</p><div class="wrap"><table style="min-width:900px"><thead><tr><th>День<th>Дистанция<th>Заявка<th>Заплыв<th>Итог<th>Итог к заявке<th>Прошлый результат<th>Итог к прошлому<th>Разряд</thead><tbody>${tr}</tbody></table></div>${comps.length>1?`<p style="margin:10px 0 0"><button class="btn" data-cmp="${esc(n)}">Динамика по соревнованиям</button></p>`:''}`;
   if(!$('dlg').open)$('dlg').showModal();
 }
 document.addEventListener('click',e=>{const d=e.target.dataset||{};if(d.lgi!==undefined){openLeg(+d.lgi,d.lgs);return}if(d.n)openAth(d.n);if(d.cmp){if($('dlg').open)$('dlg').close();$('cm').value='a';$('ca').value=d.cmp;showTab('cmp');renderCmp()}});
