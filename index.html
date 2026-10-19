@@ -89,7 +89,8 @@ dialog .wrap{max-height:62vh}
 /* всё содержимое таблиц — по центру и по горизонтали, и по вертикали (кроме полос с названием группы) */
 .wrap th,.wrap td{text-align:center;vertical-align:middle}
 .wrap tr.ev td,.wrap tr.hp td,.wrap td[colspan],.wrap .evi{text-align:left}
-.wrap td:has(a.nm) *,.wrap td.t,.wrap td.lc,.cmpt td:first-child,.cmpt th:first-child{text-align:center}
+.wrap td.t,.wrap td.lc,.cmpt td:first-child,.cmpt th:first-child{text-align:center}
+.wrap td:has(a.nm),.wrap td:has(a.nm) *{text-align:left}      /* ФИО спортсменов — по левому краю */
 .wrap td .legs{text-align:center}
 /* таблица результатов: закреплены «Место» и «ФИО» */
 #rtab th:first-child,#rtab td.pl{min-width:64px;width:64px;max-width:64px}
@@ -831,6 +832,7 @@ async function loadFiles(files){
 const uniq=k=>[...new Set(rows.map(r=>r[k]).filter(Boolean))];
 function fill(id,label,vals){$(id).innerHTML='<option value="">'+label+'</option>'+vals.map(v=>'<option>'+esc(v)+'</option>').join('')}
 function init(){
+  fixCoaches();
   drop.classList.add('hide');$('app').classList.remove('hide');
   fill('fd','Все дни',uniq('date'));fill('fs','Все дистанции',uniq('dist'));fill('fg','Все пол',uniq('sex'));fill('fp','Все группы',uniq('grp'));fill('ft','Все клубы',uniq('team'));
   fill('wd','Все дни',uniq('date'));fill('ws','Все дистанции',uniq('dist'));fill('wg','Все группы',uniq('grp'));
@@ -901,6 +903,40 @@ function renderEnt(){
   }
   tb.innerHTML=h||'<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--mute)">Ничего не найдено. Измените фильтры.</td></tr>';fixRows(tb);
   $('ecnt').textContent='Спортсменов: '+new Set(L.map(e=>e.key)).size+' · заявок на старты: '+L.length;
+}
+
+// ---- ФИО тренеров: «Фамилия И. О.»
+const COACH_FIX={'глуховчеко':'Глуховченко'},COACH_FULL={'повстанюк':'Т. В.','андрющенко':'М. А.'};
+function normCoach(src){
+  if(!src)return src;
+  let t=String(src).replace(/\s+/g,' ').trim().replace(/[,;.\s]+$/,'');
+  t=t.replace(/^бр\.?\s*/i,'');
+  t=t.replace(/([a-zа-яёîșțăâ])([A-ZА-ЯЁ])(?=[.,;\/\s]|$)/g,'$1 $2');      // «ПовстанюкТ.» → «Повстанюк Т.»
+  const out=[];
+  for(const piece of t.split(/\s*[,;\/]\s*/)){
+    const tk=piece.replace(/\./g,'. ').split(/\s+/).filter(Boolean);
+    let cur=null,lead=[],prevWord=false;
+    const push=()=>{if(cur)out.push(cur)};
+    for(const w of tk){
+      if(/^[A-ZА-ЯЁ]\.?$/.test(w)){const l=w[0];if(cur){cur.init.push(l)}else lead.push(l);prevWord=false}
+      else{const word=w.replace(/\.$/,'');
+        if(cur&&cur.init.length<2&&prevWord){cur.init.push(word[0].toUpperCase())}
+        else{push();cur={fam:COACH_FIX[word.toLowerCase()]||word,init:lead};lead=[]}
+        prevWord=true}
+    }
+    push();
+  }
+  return out.filter(e=>e.fam).map(e=>e.fam+(e.init.length?' '+e.init.map(l=>l+'.').join(' '):'')).join(', ');
+}
+function fixCoaches(){
+  const all=[...comps.flatMap(c=>c.rows),...starts,...ents,...rows];
+  all.forEach(x=>{if(x.coach&&!x._cn){x.coach=normCoach(x.coach);x._cn=1}});
+  const m=new Map();      // фамилия → инициалы, если они однозначны во всех протоколах
+  all.forEach(x=>{if(x.coach)x.coach.split(', ').forEach(p=>{const q=p.match(/^(\S+) ((?:[A-ZА-ЯЁ]\. ?)+)$/);if(q){const k=q[1].toLowerCase();(m.get(k)||m.set(k,new Set()).get(k)).add(q[2].trim())}})});
+  const best=new Map();
+  m.forEach((v,k)=>{const L=[...v].sort((p,q)=>q.length-p.length)[0];if([...v].every(i=>L.startsWith(i)))best.set(k,L)});
+  Object.entries(COACH_FULL).forEach(([k,v])=>best.set(k,v));
+  all.forEach(x=>{if(x.coach)x.coach=x.coach.split(', ').map(p=>{const q=p.match(/^(\S+)(?: ((?:[A-ZА-ЯЁ]\. ?)+))?$/);if(!q)return p;const k=q[1].toLowerCase(),L=best.get(k);if(!L)return p;return q[1]+' '+L}).join(', ')});
 }
 const fixRows=tb=>tb.querySelectorAll('tr.ev>td[colspan],tr.hp>td[colspan]').forEach(td=>{if(!td.firstElementChild||!td.firstElementChild.classList.contains('evi')){const d=document.createElement('div');d.className='evi';while(td.firstChild)d.appendChild(td.firstChild);td.appendChild(d)}});      // подписи групп остаются на виду при горизонтальной прокрутке
 let grpList=[];
