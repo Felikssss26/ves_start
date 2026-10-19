@@ -905,6 +905,22 @@ function renderEnt(){
   $('ecnt').textContent='Спортсменов: '+new Set(L.map(e=>e.key)).size+' · заявок на старты: '+L.length;
 }
 
+
+// ---- запрет «некорректных» переносов: инициалы, единицы измерения (с, м, день) не отрываются от предыдущего слова
+(function(){
+  const NB='\u00a0',R1=/(\S) (?=[A-ZА-ЯЁ]\.)/g,R2=/(\d) (?=(?:в\.г|с|м|мин|сек|дн|день|дня|дней|кг|г)\.?(?![а-яёa-z]))/g;
+  const fix=root=>{
+    if(!root||root.nodeType!==1&&root.nodeType!==11)return;
+    const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;
+    while(n=w.nextNode()){const t=n.nodeValue;if(t.indexOf(' ')<0)continue;
+      const u=t.replace(R1,'$1'+NB).replace(R2,'$1'+NB).replace(/([Зз]аплыв|дор\.|дорожка|№) (?=\d)/g,'$1'+NB);if(u!==t)n.nodeValue=u}
+  };
+  fix(document.body);
+  let q=new Set(),raf=0;
+  const run=()=>{raf=0;const a=[...q];q.clear();a.forEach(fix)};
+  new MutationObserver(ms=>{ms.forEach(m=>m.addedNodes.forEach(x=>{if(x.nodeType===1)q.add(x)}));
+    if(!raf&&q.size)raf=requestAnimationFrame(run)}).observe(document.body,{childList:true,subtree:true});
+})();
 // ---- ФИО тренеров: «Фамилия И. О.»
 const COACH_FIX={'глуховчеко':'Глуховченко'},COACH_FULL={'повстанюк':'Т. В.','андрющенко':'М. А.'};
 function normCoach(src){
