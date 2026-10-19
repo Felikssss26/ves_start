@@ -86,12 +86,11 @@ dialog .wrap{max-height:62vh}
 .wrap:has(#etb) thead th:nth-child(2),.wrap:has(#etb) tr:not(.ev):not(.hp) td:nth-child(2),.wrap:has(#stb) thead th:nth-child(2),.wrap:has(#stb) tr:not(.ev):not(.hp) td:nth-child(2){position:sticky;left:64px;z-index:1;background:var(--card);box-shadow:2px 0 0 var(--line)}
 .wrap:has(#etb) thead th:nth-child(2),.wrap:has(#stb) thead th:nth-child(2){z-index:3;background:var(--accbg)}
 .wrap tr.hp>td{background:var(--accbg)!important;background-image:none!important}
-/* центрирование заголовков и значений; слева — только ФИО и подписи строк */
-.wrap th,.wrap td{text-align:center}
-.wrap td:has(a.nm),.wrap td:has(a.nm) *{text-align:left}
-.cmpt td:first-child,.cmpt th:first-child,#nb td:first-child,#ng td:first-child,#mb td:first-child{text-align:left}
-.wrap td[colspan],.wrap .evi{text-align:left}
-.wrap td.t,.wrap td.lc{text-align:center}
+/* всё содержимое таблиц — по центру и по горизонтали, и по вертикали (кроме полос с названием группы) */
+.wrap th,.wrap td{text-align:center;vertical-align:middle}
+.wrap tr.ev td,.wrap tr.hp td,.wrap td[colspan],.wrap .evi{text-align:left}
+.wrap td:has(a.nm) *,.wrap td.t,.wrap td.lc,.cmpt td:first-child,.cmpt th:first-child{text-align:center}
+.wrap td .legs{text-align:center}
 /* таблица результатов: закреплены «Место» и «ФИО» */
 #rtab th:first-child,#rtab td.pl{min-width:64px;width:64px;max-width:64px}
 #rtab thead th:nth-child(2),#rtab tr:not(.ev) td:nth-child(2){position:sticky;left:64px;z-index:1;background:var(--card);box-shadow:2px 0 0 var(--line)}
