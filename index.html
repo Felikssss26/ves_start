@@ -86,6 +86,12 @@ dialog .wrap{max-height:62vh}
 .wrap:has(#etb) thead th:nth-child(2),.wrap:has(#etb) tr:not(.ev):not(.hp) td:nth-child(2),.wrap:has(#stb) thead th:nth-child(2),.wrap:has(#stb) tr:not(.ev):not(.hp) td:nth-child(2){position:sticky;left:64px;z-index:1;background:var(--card);box-shadow:2px 0 0 var(--line)}
 .wrap:has(#etb) thead th:nth-child(2),.wrap:has(#stb) thead th:nth-child(2){z-index:3;background:var(--accbg)}
 .wrap tr.hp>td{background:var(--accbg)!important;background-image:none!important}
+/* центрирование заголовков и значений; слева — только ФИО и подписи строк */
+.wrap th,.wrap td{text-align:center}
+.wrap td:has(a.nm),.wrap td:has(a.nm) *{text-align:left}
+.cmpt td:first-child,.cmpt th:first-child,#nb td:first-child,#ng td:first-child,#mb td:first-child{text-align:left}
+.wrap td[colspan],.wrap .evi{text-align:left}
+.wrap td.t,.wrap td.lc{text-align:center}
 /* таблица результатов: закреплены «Место» и «ФИО» */
 #rtab th:first-child,#rtab td.pl{min-width:64px;width:64px;max-width:64px}
 #rtab thead th:nth-child(2),#rtab tr:not(.ev) td:nth-child(2){position:sticky;left:64px;z-index:1;background:var(--card);box-shadow:2px 0 0 var(--line)}
@@ -117,7 +123,7 @@ header{z-index:5}
 .wrap,.card,#drop,#nt{background:color-mix(in srgb,var(--card) 84%,transparent)}
 #drop.over{background:var(--accbg)}
 #cbox th{white-space:normal}
-#cbox td:first-child,#cbox th:first-child{white-space:nowrap}
+#cbox .cmpt td:first-child,#cbox .cmpt th:first-child{white-space:normal}
 html[data-view="pc"]{overflow-x:hidden}
 html[data-view="pc"] body{font-size:15px}
 html[data-view="pc"] table{min-width:0!important}
@@ -639,7 +645,7 @@ function renderCmp(){
     let b='',nst=0,nm=0;
     for(const o of per.values()){
       const tt=comps.map((c,i)=>o.c[i]?T(o.c[i]):null),vals=tt.filter(v=>v!=null),best=vals.length>1?Math.min(...vals):null;
-      b+=`<tr><td><b>${esc(o.dist)}</b></td>`+comps.map((c,i)=>{const r=o.c[i];if(!r)return '<td>—</td>';nst++;if(r.pl>=1&&r.pl<=3)nm++;const t=r.st?esc(r.st):esc(fmtT(r.res));return `<td class="t">${tt[i]!=null&&tt[i]===best?'<b>★ '+t+'</b>':t}${r.pl?' <span style="color:var(--mute)">· '+r.pl+' м.</span>':''}</td>`}).join('');
+      b+=`<tr><td><b>${esc(o.dist)}</b></td>`+comps.map((c,i)=>{const r=o.c[i];if(!r)return '<td>—</td>';nst++;if(r.pl>=1&&r.pl<=3)nm++;const t=r.st?esc(r.st):esc(fmtT(r.res));return `<td class="t">${r.pl?'<span style="color:var(--mute);font-weight:700">'+r.pl+' место</span><br>':''}${tt[i]!=null&&tt[i]===best?'<b>★ '+t+'</b>':t}</td>`}).join('');
       const dl=vals.length>1?vals[vals.length-1]-vals[vals.length-2]:null;
       b+=`<td class="t">${dl==null?'—':`<span style="color:${dl<=0?'var(--ok)':'var(--bad)'};font-weight:600">${dS(dl)}</span>`}</td>${nrCell(o,vals)}</tr>`;
     }
@@ -922,7 +928,7 @@ function openLeg(gi,n){      // окно: группа ранжирована т
   const ok=G.filter(num).sort((a,b)=>lv(a)-lv(b)),no=G.filter(r=>!num(r));
   let p=0,pv=null;const pl=new Map();ok.forEach((r,i)=>{if(lv(r)!==pv){p=i+1;pv=lv(r)}pl.set(r,p)});
   const sumT=r=>r.st?esc(r.st):esc(fmtT(r.res)),txt=v=>esc(v==null?'—':({'ня':'н/я','дк':'д/к'})[v]||v);
-  const tr=(r,p)=>`<tr class="${p&&p<4?'p'+p:''}"><td class="pl">${p||''}</td><td><a class="nm" data-n="${esc(r.fio)}">${esc(r.fio)}</a></td><td>${esc(r.yob)}</td><td>${esc(r.club||'')}</td><td class="t">${num(r)?esc(fS(lv(r))):txt(lv(r))}</td><td class="t" style="color:var(--mute)">${sumT(r)}${r.pl?' · '+r.pl+' м.':''}</td></tr>`;
+  const tr=(r,p)=>`<tr class="${p&&p<4?'p'+p:''}"><td class="pl">${p||''}</td><td><a class="nm" data-n="${esc(r.fio)}">${esc(r.fio)}</a></td><td>${esc(r.yob)}</td><td>${esc(r.club||'')}</td><td class="t">${num(r)?esc(fS(lv(r))):txt(lv(r))}</td><td class="t" style="color:var(--mute)">${r.pl?'<b style="color:var(--ink)">'+r.pl+' место</b><br>':''}${sumT(r)}</td></tr>`;
   $('dn').textContent=g.dist.replace(/\s*\(раздельный старт\)/,'')+' · '+n;
   $('db').innerHTML=`<p style="margin:0 0 8px;color:var(--mute)">${esc(g.sex)}, ${esc(g.grp)} · ${esc(g.date)}. Места — только по заплыву «${esc(n)}»</p><p class="lbs" style="margin:0 0 10px">${['Батт','Спина','Брасс','В/с'].map(x=>`<button class="lb${x===n?' on':''}" data-lgi="${gi}" data-lgs="${x}">${x}</button>`).join('')}</p><div class="wrap"><table style="min-width:520px"><thead><tr><th>Место<th>ФИО<th>Г.р.<th>Клуб<th>${esc(n)}<th>Сумма (место)</thead><tbody>${ok.map(r=>tr(r,pl.get(r))).join('')}${no.map(r=>tr(r,0)).join('')}</tbody></table></div>`;
   if(!$('dlg').open)$('dlg').showModal();
