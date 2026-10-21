@@ -167,6 +167,8 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 .badge{font-size:11px;background:var(--accbg);color:var(--acc);padding:2px 8px;border-radius:999px;margin-left:8px;font-weight:700}
 .ccard.up{border-style:dashed;border-left-width:1px;align-items:center;justify-content:center;color:var(--mute);min-height:110px;font-weight:600;background:transparent}
 .hide{display:none!important}
+.cmpt td.nx,.cmpt td.nx *{white-space:nowrap}.cmpt td.nx{min-width:250px}
+.cmpt th:last-child{white-space:nowrap}
 /* ---- анимация ---- */
 @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -684,7 +686,7 @@ function renderCmp(){
       b+=`<td class="t">${dl==null?'—':`<span style="color:${dl<=0?'var(--ok)':'var(--bad)'};font-weight:600">${dS(dl)}</span>`}</td>${nrCell(o,vals)}</tr>`;
     }
     cc.textContent=n+' · стартов: '+nst+' · медалей: '+nm;
-    box.innerHTML=wrapT(380+comps.length*110,'<th>Дистанция'+comps.map(c=>th(c.lab)).join('')+'<th>Динамика<th>До следующего разряда',b)+'<p style="color:var(--mute);margin:8px 2px">★ — личный рекорд среди загруженных соревнований. Динамика — разница между двумя последними стартами на дистанции (зелёный — быстрее). Сравнивайте с учётом длины бассейна. «До следующего разряда» считается по лучшему времени на дистанции с учётом имеющегося разряда; по таблицам нормативов для мальчиков и девочек (бассейн 25 м).</p>'+hint;
+    box.innerHTML=wrapT(560+comps.length*110,'<th>Дистанция'+comps.map(c=>th(c.lab)).join('')+'<th>Динамика<th>До следующего разряда',b)+'<p style="color:var(--mute);margin:8px 2px">★ — личный рекорд среди загруженных соревнований. Динамика — разница между двумя последними стартами на дистанции (зелёный — быстрее). Сравнивайте с учётом длины бассейна. «До следующего разряда» считается по лучшему времени на дистанции с учётом имеющегося разряда; по таблицам нормативов для мальчиков и девочек (бассейн 25 м).</p>'+hint;
   }else if(m==='d'){
     const dk=$('cd').value,sx=$('cx').value,gp=$('cg').value;
     const F=c=>cRows(c).filter(r=>dkey(r.dist)===dk&&(!sx||r.sex===sx)&&(!gp||String(r.yob)===gp)&&T(r)!=null);
@@ -775,9 +777,9 @@ function nextRank(sex,dist,sec,held){
 }
 function nrCell(o,vals){
   const rr=o.c.filter(Boolean),sex=(rr[0]||{}).sex;
-  if(!vals.length||!normRow(sex,o.dist))return '<td class="t">—</td>';
+  if(!vals.length||!normRow(sex,o.dist))return '<td class="t nx">—</td>';
   const n=nextRank(sex,o.dist,Math.min(...vals),rr.map(r=>r.rank).filter(Boolean).pop());
-  return '<td><b>'+esc(rkL(n.cur))+'</b>'+(n.next?' → '+esc(rkL(n.next))+'<br><span class="mu">не хватает '+n.gap.toFixed(2).replace('.',',')+' с · норматив '+fS(n.norm)+'</span>':' <span class="mu">· высший разряд по таблице</span>')+'</td>';
+  return '<td class="nx"><b>'+esc(rkL(n.cur))+'</b>'+(n.next?' → '+esc(rkL(n.next))+'<br><span class="mu">не хватает '+n.gap.toFixed(2).replace('.',',')+' с · норматив '+fS(n.norm)+'</span>':' <span class="mu">· высший разряд по таблице</span>')+'</td>';
 }
 const isUp=r=>{const c=rankChange(r);return !!c&&c.d>0};
 const legsHtml=(r,pre,hl)=>r.legs&&r.legs.length?'<div class="legs">'+(pre||'')+r.legs.map(l=>(l.n===hl?'<span style="color:var(--acc);font-weight:700">'+esc(l.n)+'</span>':esc(l.n))+' <b>'+(typeof l.v==='number'?String(l.v.toFixed(2)).replace('.',','):esc(l.v==null?'—':({'ня':'н/я','дк':'д/к'})[l.v]||l.v))+'</b>').join(' · ')+'</div>':'';
