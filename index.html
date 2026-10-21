@@ -167,6 +167,8 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 .badge{font-size:11px;background:var(--accbg);color:var(--acc);padding:2px 8px;border-radius:999px;margin-left:8px;font-weight:700}
 .ccard.up{border-style:dashed;border-left-width:1px;align-items:center;justify-content:center;color:var(--mute);min-height:110px;font-weight:600;background:transparent}
 .hide{display:none!important}
+.ccard.upc.hasdocs{cursor:pointer}.ccard.upc.hasdocs:hover,.ccard.upc.hasdocs:focus-visible{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.18)}
+.pol{margin:0 0 16px;text-align:center}.pol figcaption{font-weight:600;margin:0 0 6px;color:var(--mute)}.pol img{max-width:min(100%,900px);height:auto;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.12)}
 .cmpt td.nx,.cmpt td.nx *{white-space:nowrap}.cmpt td.nx{min-width:250px}
 .cmpt th:last-child{white-space:nowrap}
 /* ---- анимация ---- */
@@ -235,6 +237,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
       <button role="tab" data-t="ent" aria-selected="false">Заявка</button>
       <button role="tab" data-t="sta" aria-selected="false">Заплывы</button>
       <button role="tab" data-t="cmp" aria-selected="false">Сравнение</button>
+      <button role="tab" data-t="pol" aria-selected="false" class="hide">Положение</button>
       <button role="tab" data-t="nrm" aria-selected="false">Нормативы</button>
     </nav>
     <section id="v-res">
@@ -268,6 +271,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
       <div class="count" id="scnt"></div>
       <div class="wrap"><table><thead><tr><th>Дор.<th>ФИО<th>Г.р.<th>Группа<th>Разряд<th>Клуб<th>Заявка<th>Тренер</thead><tbody id="stb"></tbody></table></div>
     </section>
+    <section id="v-pol" class="hide"><div id="polb"></div></section>
     <section id="v-nrm" class="hide">
       <div class="count">Разрядные нормативы (бассейн 25 м, по фото таблиц), время в формате мин:сек,сотые. По ним в итогах показывается повышение разряда и в динамике — сколько не хватает до следующего.</div>
       <h3 class="hh" style="font-size:16px">Мальчики и юноши</h3>
@@ -892,7 +896,7 @@ function init(){
 $('rst').onclick=()=>{['q','fd','fs','fg','fp','ft'].forEach(i=>$(i).value='');$('fm').checked=false;$('fu').checked=false;render()};
 function showTab(t){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));
-  ['res','win','med','ent','sta','cmp','nrm'].forEach(x=>$('v-'+x).classList.toggle('hide',x!==t));
+  ['res','win','med','ent','sta','cmp','nrm','pol'].forEach(x=>$('v-'+x).classList.toggle('hide',x!==t));
 }
 $('tabs').onclick=e=>{if(e.target.dataset.t)showTab(e.target.dataset.t)};
 ['eq','ed','es','eg','ep','et','eh'].forEach(id=>$(id).addEventListener('input',renderEnt));
@@ -1140,11 +1144,12 @@ function renderHome(){
     if(c.upcoming||!c.files.length){      // предстоящее соревнование: материалов ещё нет, карточка не открывается
       const d=c.start&&c.start.length===10?Math.round((new Date(c.start+'T00:00:00')-new Date(new Date().toDateString()))/864e5):null;
       const left=d==null||d<0?'':d===0?' Сегодня.':d===1?' Завтра.':' Через '+d+' дн.';
-      return `<div class="ccard upc"${artStyle(c)}><span class="cdate">${esc(c.date||'')}<b class="badge">Предстоящее</b></span><span class="ctitle">${esc(c.title)}</span><span class="cplace">${ICO}${placeHtml(c)}</span>${venueHtml(c)}<span class="cnote">Материалы появятся после соревнования.${left}</span></div>`;
+      const dc=c.docs&&c.docs.length,tg=dc?'button':'div';
+      return `<${tg} class="ccard upc${dc?' hasdocs':''}"${dc?' data-open="'+esc(c.id)+'"':''}${artStyle(c)}><span class="cdate">${esc(c.date||'')}<b class="badge">Предстоящее</b></span><span class="ctitle">${esc(c.title)}</span><span class="cplace">${ICO}${placeHtml(c)}</span>${venueHtml(c)}${dc?'<span class="cchips"><i>Положение</i></span>':''}<span class="cnote">Материалы появятся после соревнования.${left}</span></${tg}>`;
     }
     const pre=!kinds.includes('itog');      // есть стартовый протокол или заявка, итогов ещё нет
     return `<button class="ccard${pre?' pre':''}" data-open="${esc(c.id)}"${artStyle(c)}><span class="cdate">${esc(c.date||'')}${pre?'<b class="badge">Итогов пока нет</b>':''}</span><span class="ctitle">${esc(c.title)}</span>`+
-      `<span class="cplace">${ICO}${placeHtml(c)}</span>${venueHtml(c)}<span class="cchips">${kinds.map(k=>`<i>${esc(KINDS[k])}</i>`).join('')}</span>${c.note?`<span class="cnote">${esc(c.note)}</span>`:''}</button>`};
+      `<span class="cplace">${ICO}${placeHtml(c)}</span>${venueHtml(c)}<span class="cchips">${kinds.map(k=>`<i>${esc(KINDS[k])}</i>`).join('')}${c.docs&&c.docs.length?'<i>Положение</i>':''}</span>${c.note?`<span class="cnote">${esc(c.note)}</span>`:''}</button>`};
   $('cgrid').innerHTML=SEC.map((t,i)=>{const L=list.filter(c=>secOf(c)===i);return L.length?`<h3 class="csec">${t}</h3>`+L.map(html).join(''):''}).join('')+
     '<button class="ccard up" data-upload="1" style="margin-top:10px">+ Открыть свои файлы Excel</button>';
   $('clr').classList.toggle('hide',!Object.keys(userParsed).length);
@@ -1154,13 +1159,16 @@ function showHome(){
   openId=null;$('app').classList.add('hide');$('home').classList.remove('hide');$('back').classList.add('hide');
   if($('dlg').open)$('dlg').close();setSub();renderHome();window.scrollTo(0,0);
 }
+const curDocs=()=>{const c=allCat().find(x=>x.id===openId);return (c&&c.docs)||[]};
+function renderDocs(){
+  const d=curDocs();$('polb').innerHTML=d.map(x=>{const u='data/'+encodeURI(x.name);return `<figure class="pol"><figcaption>${esc(x.title||'Положение')} · <a href="${u}" target="_blank" rel="noopener">открыть отдельно</a></figcaption><a href="${u}" target="_blank" rel="noopener"><img src="${u}" alt="${esc(x.title||'Положение')}" loading="lazy"></a></figure>`}).join('')}
 function updateTabs(){
-  const has={res:rows.length>0,win:rows.length>0,med:rows.length>0,ent:ents.length>0,sta:starts.length>0,cmp:comps.length>0,nrm:true};
+  const has={res:rows.length>0,win:rows.length>0,med:rows.length>0,ent:ents.length>0,sta:starts.length>0,cmp:comps.length>0,nrm:true,pol:curDocs().length>0};
   document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('hide',!has[b.dataset.t]));
 }
 // открыть соревнование: подтягиваются его файлы и (для сравнения) итоги остальных соревнований
 async function openCompetition(id,push=true){
-  const c=allCat().find(x=>x.id===id);if(!c||opening||c.upcoming||!c.files.length)return;
+  const c=allCat().find(x=>x.id===id);if(!c||opening||((c.upcoming||!c.files.length)&&!(c.docs&&c.docs.length)))return;
   opening=true;$('ld').classList.add('on');$('sub').textContent='Загрузка материалов…';$('err').textContent='';
   try{
     rows=[];ents=[];starts=[];efiles={};sfiles={};comps=[];resNotes=[];picked=false;curFile='';
@@ -1184,8 +1192,8 @@ async function openCompetition(id,push=true){
     if(!mine.length){rows=[];resNotes=[];curFile=''}
     openId=id;
     $('err').textContent=errs.length?'Не удалось прочитать: '+errs.join('; '):'';
-    showApp();showNotes();setSub();init();updateTabs();
-    showTab(rows.length?'res':starts.length?'sta':ents.length?'ent':'cmp');
+    showApp();showNotes();setSub();init();updateTabs();renderDocs();
+    showTab(rows.length?'res':starts.length?'sta':ents.length?'ent':(c.docs&&c.docs.length)?'pol':'cmp');
     if(push)history.pushState({c:id},'','');
     window.scrollTo(0,0);
   }finally{opening=false;$('ld').classList.remove('on')}
