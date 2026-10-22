@@ -167,6 +167,8 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 .badge{font-size:11px;background:var(--accbg);color:var(--acc);padding:2px 8px;border-radius:999px;margin-left:8px;font-weight:700}
 .ccard.up{border-style:dashed;border-left-width:1px;align-items:center;justify-content:center;color:var(--mute);min-height:110px;font-weight:600;background:transparent}
 .hide{display:none!important}
+.hnav{display:flex;gap:6px;flex-wrap:wrap}.hnav .btn{padding:7px 10px;font-size:13px;white-space:nowrap}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:80;max-width:90vw;text-align:center}#toast.on{opacity:1;transform:translate(-50%,0)}
 .ccard.upc.hasdocs{cursor:pointer}.ccard.upc.hasdocs:hover,.ccard.upc.hasdocs:focus-visible{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.18)}
 .pol{margin:0 0 16px;text-align:center}.pol figcaption{font-weight:600;margin:0 0 6px;color:var(--mute)}.pol img{max-width:min(100%,900px);height:auto;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.12)}
 .cmpt td.nx,.cmpt td.nx *{white-space:nowrap}.cmpt td.nx{min-width:250px}
@@ -208,7 +210,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
 </head>
 <body>
 <header>
-  <button class="btn ghost hide" id="back" aria-label="Ко всем соревнованиям">← Соревнования</button>
+  <div class="hnav"><button class="btn ghost" id="back" aria-label="Домой — ко всем соревнованиям">⌂ Домой</button><button class="btn ghost" id="refr" aria-label="Обновить данные">↻ Обновить</button><button class="btn ghost" id="shr" aria-label="Поделиться приложением">⤴ Поделиться</button></div>
   <h1 id="title"><b>ВЕСЁЛЫЕ СТАРТЫ</b>: результаты и статистика соревнований<small id="sub">Загрузите файлы Excel: итоги, заявку, стартовый протокол</small></h1>
   <div class="menuwrap">
     <button class="btn ghost kebab" id="kebab" aria-label="Меню" aria-haspopup="true" aria-expanded="false" aria-controls="menu">⋮</button>
@@ -1154,9 +1156,9 @@ function renderHome(){
     '<button class="ccard up" data-upload="1" style="margin-top:10px">+ Открыть свои файлы Excel</button>';
   $('clr').classList.toggle('hide',!Object.keys(userParsed).length);
 }
-function showApp(){$('home').classList.add('hide');$('drop').classList.add('hide');$('app').classList.remove('hide');$('back').classList.remove('hide')}
+function showApp(){$('home').classList.add('hide');$('drop').classList.add('hide');$('app').classList.remove('hide')}
 function showHome(){
-  openId=null;$('app').classList.add('hide');$('home').classList.remove('hide');$('back').classList.add('hide');
+  openId=null;$('app').classList.add('hide');$('home').classList.remove('hide');
   if($('dlg').open)$('dlg').close();setSub();renderHome();window.scrollTo(0,0);
 }
 const curDocs=()=>{const c=allCat().find(x=>x.id===openId);return (c&&c.docs)||[]};
@@ -1209,7 +1211,21 @@ document.addEventListener('click',e=>{
   const o=e.target.closest('[data-open]');if(o)openCompetition(o.dataset.open);
   if(e.target.closest('[data-upload]'))$('file').click();
 });
-$('back').onclick=()=>{if(history.state&&history.state.c)history.back();else showHome()};
+$('back').onclick=()=>{if(openId){if(history.state&&history.state.c)history.back();else showHome()}else window.scrollTo({top:0,behavior:'smooth'})};
+const toast=t=>{let e=$('toast');if(!e){e=document.createElement('div');e.id='toast';document.body.appendChild(e)}e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),3500)};
+$('refr').onclick=async()=>{      // обновить базу: заново скачать каталог и все сохранённые файлы, обновить приложение и перезагрузить
+  const b=$('refr');if(b.disabled)return;b.disabled=true;b.textContent='↻ Обновляю…';
+  try{
+    const t=await fetch('data/index.json',{cache:'no-store'});if(!t.ok)throw new Error('offline');
+    if('caches' in window)for(const k of await caches.keys()){const c=await caches.open(k);for(const r of await c.keys()){try{const n=await fetch(r.url,{cache:'reload'});if(n.ok)await c.put(r,n)}catch(e){}}}
+    if(navigator.serviceWorker){const g=await navigator.serviceWorker.getRegistration();if(g)await g.update()}
+    toast('Данные обновлены');setTimeout(()=>location.reload(),600);
+  }catch(e){toast('Нет подключения к интернету — обновить не удалось');b.disabled=false;b.textContent='↻ Обновить'}
+};
+$('shr').onclick=()=>{$('dn').textContent='Поделиться приложением';
+  $('db').innerHTML='<div style="text-align:center"><img src="data/qr.jpg" alt="QR-код приложения" style="width:min(300px,80vw);height:auto;background:#fff;border-radius:8px"><p style="margin:8px 0 2px">Наведите камеру телефона на QR-код, чтобы открыть приложение</p><p style="margin:0 0 10px"><a href="https://clck.ru/3Wa7nU" target="_blank" rel="noopener">https://clck.ru/3Wa7nU</a></p><button class="btn" id="cpl">Скопировать ссылку</button></div>';
+  $('cpl').onclick=async()=>{try{await navigator.clipboard.writeText('https://clck.ru/3Wa7nU');toast('Ссылка скопирована')}catch(e){toast('Не удалось скопировать — выделите ссылку вручную')}};
+  if(!$('dlg').open)$('dlg').showModal()};
 addEventListener('popstate',()=>{if(openId)showHome()});
 (async()=>{
   await restoreUser();
