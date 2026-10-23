@@ -178,6 +178,7 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes pop{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
 @keyframes rowIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+@keyframes wv44{from{background-position-x:0}to{background-position-x:-44px}}
 @keyframes waveX{from{background-position-x:0}to{background-position-x:-200px}}
 @keyframes swim{0%{transform:translateX(-30px) rotate(-4deg)}50%{transform:translateX(30px) rotate(4deg)}100%{transform:translateX(-30px) rotate(-4deg)}}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
@@ -198,13 +199,11 @@ tbody tr:nth-child(2){animation-delay:.03s}tbody tr:nth-child(3){animation-delay
 tr.p1 td.pl,tr.p2 td.pl,tr.p3 td.pl{background-image:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);background-size:60% 100%;background-repeat:no-repeat;animation:shine 1.4s ease .5s 1 both}
 #up{transition:opacity .25s,transform .25s}
 body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;width:calc(100% + 32px);background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='10' viewBox='0 0 200 10'%3E%3Cpath d='M0 5 Q25 -1 50 5 T100 5 T150 5 T200 5 V10 H0Z' fill='%2340c4c4' fill-opacity='.45'/%3E%3C/svg%3E") repeat-x 0 0/200px 10px;animation:waveX 5s linear infinite}
-@keyframes lane{0%{left:0}50%{left:calc(100% - 38px)}100%{left:0}}
-#ld .lane{position:relative;width:150px;height:6px;border-radius:3px;background:rgba(255,255,255,.25);overflow:hidden}#ld .lane i{position:absolute;top:0;left:0;width:38px;height:6px;border-radius:3px;background:#40c4c4;animation:lane 1.1s ease-in-out infinite}
+#ld .wv{width:220px;height:22px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='22' viewBox='0 0 44 22'%3E%3Cpath d='M0 11 Q11 0 22 11 T44 11' fill='none' stroke='%2340c4c4' stroke-width='3.5' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x 0 0/44px 22px;animation:wv44 .9s linear infinite}#ld .wv.w2{margin-top:-14px;opacity:.5;animation-duration:1.5s;animation-direction:reverse}
 #ld{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;background:rgba(10,20,24,.45);backdrop-filter:blur(2px);color:#fff;font-weight:600;font-size:14px}
 #ld.on{display:flex;animation:fadeIn .2s ease both}
 #ld .sw{width:90px;height:90px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:44px;box-shadow:0 8px 30px rgba(0,0,0,.35);animation:bob 1.1s ease-in-out infinite;overflow:hidden;position:relative}
 #ld .sw span{display:block;animation:swim 1.6s ease-in-out infinite}
-#ld .wv{width:140px;height:14px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='14' viewBox='0 0 40 14'%3E%3Cpath d='M0 7 Q10 0 20 7 T40 7' fill='none' stroke='%2340c4c4' stroke-width='3'/%3E%3C/svg%3E") repeat-x 0 0/40px 14px;animation:waveX .8s linear infinite}
 .cgrid .count{animation:bob 1.2s ease-in-out infinite}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
@@ -294,7 +293,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
     </section>
   </div>
 </main>
-<div id="ld" aria-live="polite" role="status"><div class="lane"><i></i></div><div>Загрузка…</div></div>
+<div id="ld" aria-live="polite" role="status"><div class="wv"></div><div class="wv w2"></div><div>Загрузка…</div></div>
 <button id="up" aria-label="Наверх" title="Наверх">↑</button>
 <dialog id="dlg"><header><h2 id="dn"></h2><button class="btn ghost" id="dx" style="color:var(--ink)">Закрыть</button></header><div id="db" style="padding:12px"></div></dialog>
 <script>
