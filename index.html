@@ -167,6 +167,7 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 .badge{font-size:11px;background:var(--accbg);color:var(--acc);padding:2px 8px;border-radius:999px;margin-left:8px;font-weight:700}
 .ccard.up{border-style:dashed;border-left-width:1px;align-items:center;justify-content:center;color:var(--mute);min-height:110px;font-weight:600;background:transparent}
 .hide{display:none!important}
+#cp{text-align:center;color:var(--mute);font-size:12px;padding:18px 16px 24px}
 .hnav{display:flex;gap:6px;flex-wrap:wrap}.hnav .btn{padding:7px 10px;display:inline-flex;align-items:center;justify-content:center;line-height:0}.hnav .spin svg{animation:rot 1s linear infinite}@keyframes rot{to{transform:rotate(360deg)}}
 #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:80;max-width:90vw;text-align:center}#toast.on{opacity:1;transform:translate(-50%,0)}
 .ccard.upc.hasdocs{cursor:pointer}.ccard.upc.hasdocs:hover,.ccard.upc.hasdocs:focus-visible{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.18)}
@@ -293,6 +294,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
     </section>
   </div>
 </main>
+<footer id="cp">©MD</footer>
 <div id="ld" aria-live="polite" role="status"><div class="wv"></div><div class="wv w2"></div><div>Загрузка…</div></div>
 <button id="up" aria-label="Наверх" title="Наверх">↑</button>
 <dialog id="dlg"><header><h2 id="dn"></h2><button class="btn ghost" id="dx" style="color:var(--ink)">Закрыть</button></header><div id="db" style="padding:12px"></div></dialog>
