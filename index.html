@@ -875,7 +875,7 @@ async function loadFiles(files){
   }
 }
 const uniq=k=>[...new Set(rows.map(r=>r[k]).filter(Boolean))];
-function fill(id,label,vals){$(id).innerHTML='<option value="">'+label+'</option>'+vals.map(v=>'<option>'+esc(v)+'</option>').join('')}
+function fill(id,label,vals){$(id).innerHTML='<option value="">'+label+'</option>'+vals.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')}
 function init(){
   fixCoaches();
   drop.classList.add('hide');$('app').classList.remove('hide');
@@ -956,7 +956,7 @@ function renderEnt(){
   const NB='\u00a0',R1=/(\S) (?=[A-ZА-ЯЁ]\.)/g,R2=/(\d) (?=(?:в\.г|с|м|мин|сек|дн|день|дня|дней|кг|г)\.?(?![а-яёa-z]))/g;
   const fix=root=>{
     if(!root||root.nodeType!==1&&root.nodeType!==11)return;
-    const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;
+    const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:t=>t.parentElement&&t.parentElement.closest('option,select,textarea,script,style,input,[data-nonb]')?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});let n;
     while(n=w.nextNode()){const t=n.nodeValue;if(t.indexOf(' ')<0)continue;
       const u=t.replace(R1,'$1'+NB).replace(R2,'$1'+NB).replace(/([Зз]аплыв|дор\.|дорожка|№) (?=\d)/g,'$1'+NB);if(u!==t)n.nodeValue=u}
   };
@@ -1026,7 +1026,7 @@ function openLeg(gi,n){      // окно: группа ранжирована т
   const sumT=r=>r.st?esc(r.st):esc(fmtT(r.res)),txt=v=>esc(v==null?'—':({'ня':'н/я','дк':'д/к'})[v]||v);
   const tr=(r,p)=>`<tr class="${p&&p<4?'p'+p:''}"><td class="pl">${p||''}</td><td><a class="nm" data-n="${esc(r.fio)}">${esc(r.fio)}</a></td><td>${esc(r.yob)}</td><td>${esc(r.club||'')}</td><td class="t">${num(r)?esc(fS(lv(r))):txt(lv(r))}</td><td class="t" style="color:var(--mute)">${r.pl?'<b style="color:var(--ink)">'+r.pl+' место</b><br>':''}${sumT(r)}</td></tr>`;
   $('dn').textContent=g.dist.replace(/\s*\(раздельный старт\)/,'')+' · '+n;
-  $('db').innerHTML=`<p style="margin:0 0 8px;color:var(--mute)">${esc(g.sex)}, ${esc(g.grp)} · ${esc(g.date)}. Места — только по заплыву «${esc(n)}»</p><p class="lbs" style="margin:0 0 10px">${['Батт','Спина','Брасс','В/с'].map(x=>`<button class="lb${x===n?' on':''}" data-lgi="${gi}" data-lgs="${x}">${x}</button>`).join('')}</p><div class="wrap"><table style="min-width:520px"><thead><tr><th>Место<th>ФИО<th>Г.р.<th>Клуб<th>${esc(n)}<th>Сумма (место)</thead><tbody>${ok.map(r=>tr(r,pl.get(r))).join('')}${no.map(r=>tr(r,0)).join('')}</tbody></table></div>`;
+  $('db').innerHTML=`<p style="margin:0 0 8px;color:var(--mute)">${esc(g.sex)}, ${esc(g.grp)}${g.date?' · '+esc(g.date):''}. Места — только по заплыву «${esc(n)}»</p><p class="lbs" style="margin:0 0 10px">${['Батт','Спина','Брасс','В/с'].map(x=>`<button class="lb${x===n?' on':''}" data-lgi="${gi}" data-lgs="${x}">${x}</button>`).join('')}</p><div class="wrap"><table style="min-width:520px"><thead><tr><th>Место<th>ФИО<th>Г.р.<th>Клуб<th>${esc(n)}<th>Сумма (место)</thead><tbody>${ok.map(r=>tr(r,pl.get(r))).join('')}${no.map(r=>tr(r,0)).join('')}</tbody></table></div>`;
   if(!$('dlg').open)$('dlg').showModal();
 }
 function cards(){
