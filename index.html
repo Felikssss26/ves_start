@@ -700,7 +700,7 @@ function renderCmp(o){
       b+=`<td class="t">${dl==null?'—':`<span style="color:${dl<=0?'var(--ok)':'var(--bad)'};font-weight:600">${dS(dl)}</span>`}</td>${nrCell(o,vals)}</tr>`;
     }
     cc.textContent=n+' · стартов: '+nst+' · медалей: '+nm;
-    box.innerHTML=wrapT(560+comps.length*110,'<th>Дистанция'+comps.map(c=>th(c.lab)).join('')+'<th>Динамика<th>До следующего разряда',b)+'<p style="color:var(--mute);margin:8px 2px">★ — личный рекорд среди загруженных соревнований. Динамика — разница между двумя последними стартами на дистанции (зелёный — быстрее). Сравнивайте с учётом длины бассейна. «До следующего разряда» считается по лучшему времени на дистанции с учётом имеющегося разряда; по таблицам нормативов для мальчиков и девочек (бассейн 25 м).</p>'+hint;
+    box.innerHTML=wrapT(560+comps.length*110,'<th>Дистанция'+comps.map(c=>th(c.lab)).join('')+'<th>Динамика<th>До следующего разряда',b)+'<p style="color:var(--mute);margin:8px 2px">★ — личный рекорд среди загруженных соревнований.</p><p style="color:var(--mute);margin:8px 2px">Динамика — разница между двумя последними стартами на дистанции (зелёный — быстрее).</p><p style="color:var(--mute);margin:8px 2px">Сравнивайте с учётом длины бассейна.</p><p style="color:var(--mute);margin:8px 2px">«До следующего разряда» считается по лучшему времени на дистанции с учётом имеющегося разряда; по таблицам нормативов для мальчиков и девочек (бассейн 25 м).</p>'+hint;
   }else if(m==='d'){
     const dk=$('cd').value,sx=$('cx').value,gp=$('cg').value;
     const F=c=>cRows(c).filter(r=>dkey(r.dist)===dk&&(!sx||r.sex===sx)&&(!gp||String(r.yob)===gp)&&T(r)!=null);
