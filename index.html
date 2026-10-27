@@ -167,6 +167,7 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 .badge{font-size:11px;background:var(--accbg);color:var(--acc);padding:2px 8px;border-radius:999px;margin-left:8px;font-weight:700}
 .ccard.up{border-style:dashed;border-left-width:1px;align-items:center;justify-content:center;color:var(--mute);min-height:110px;font-weight:600;background:transparent}
 .hide{display:none!important}
+@media (pointer:coarse){input[type=search],input[type=text]{font-size:16px}}      /* iOS не приближает страницу при фокусе в поле ввода */
 .hsearch{margin:0 0 16px;position:relative}.hsearch>input{width:100%;box-sizing:border-box;padding:12px 14px;font:inherit;font-size:15px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink)}
 #hres{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:40;max-height:60vh;overflow:auto;background:var(--card);background:color-mix(in srgb,var(--card) 78%,transparent);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.25);padding:8px 14px;animation:fadeIn .15s ease both}#hres p{margin:6px 0}.prof{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--acc);border-radius:12px;padding:14px 16px;margin:0 0 12px}
 .prof h3{margin:0 0 8px;font-size:18px}.prof dl{margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px 16px}.prof dt{font-size:12px;color:var(--mute)}.prof dd{margin:0;font-weight:600}
@@ -1168,9 +1169,22 @@ function renderHome(){
     '<button class="ccard up" data-upload="1" style="margin-top:10px">+ Открыть свои файлы Excel</button>';
   $('clr').classList.toggle('hide',!Object.keys(userParsed).length);
 }
-function showApp(){$('home').classList.add('hide');$('drop').classList.add('hide');$('app').classList.remove('hide')}
+
+// ---- сброс масштаба: пользователь увеличил страницу щипком — при переходе между главной и карточкой (и при возврате в приложение) масштаб возвращается к исходному
+function resetZoom(){
+  try{
+    const m=document.querySelector('meta[name=viewport]'),vv=window.visualViewport;
+    if(!m||!vv||vv.scale<=1.03)return;
+    const o=m.getAttribute('content'),pc=/width=820/.test(o),b=pc?(screen.width/820).toFixed(3):'1';
+    m.setAttribute('content',(pc?'width=820, viewport-fit=cover':'width=device-width, viewport-fit=cover')+', initial-scale='+b+', minimum-scale='+b+', maximum-scale='+b);
+    setTimeout(()=>m.setAttribute('content',o),400);
+  }catch(e){}
+}
+let hiddenAt=0;
+document.addEventListener('visibilitychange',()=>{if(document.hidden)hiddenAt=Date.now();else if(Date.now()-hiddenAt>30000)resetZoom()});
+function showApp(){resetZoom();$('home').classList.add('hide');$('drop').classList.add('hide');$('app').classList.remove('hide')}
 function showHome(){
-  openId=null;$('app').classList.add('hide');$('home').classList.remove('hide');
+  resetZoom();openId=null;$('app').classList.add('hide');$('home').classList.remove('hide');
   if($('dlg').open)$('dlg').close();setSub();renderHome();window.scrollTo(0,0);
 }
 const curDocs=()=>{const c=allCat().find(x=>x.id===openId);return (c&&c.docs)||[]};
