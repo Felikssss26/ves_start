@@ -168,7 +168,14 @@
     "date": "30–31.10.2026",
     "start": "2026-10-30",
     "upcoming": true,
-    "files": [],
+    "files": [
+      {
+        "name": "zolotaia_osen_2026.xlsx",
+        "kinds": [
+          "zayavka"
+        ]
+      }
+    ],
     "docs": [
       {
         "name": "polozhenie_zolotaia_osen_2026_1.jpg",
