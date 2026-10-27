@@ -418,7 +418,7 @@ function parseMatrix(a,fname,opts){
     const gv=!dc.has(yi+1)&&typeof r[yi+1]==='number'&&r[yi+1]>=1&&r[yi+1]<=9?r[yi+1]:null;
     for(const c of cols){const v=r[c.c];if(v==null||String(v).trim()==='')continue;
       const oc=/\s(вк|в\/к)\.?$/i.test(String(v).trim()),tv=tSec(oc?String(v).trim().replace(/\s*(вк|в\/к)\.?$/i,''):v);if(tv==null&&!/^(б\/в|без|нт|н\/т)/i.test(String(v).trim()))continue;
-      out.push({team:own||team,city:city||'',fio:fio.replace(/\s+/g,' ').trim(),key:nk(fio),yob,grp:gv?gv+' в.г.':grpOf(yob),gd:!gv,rank,coach,day:c.day,dist:c.dist,ord:c.c,t:tv,raw:String(v).trim(),sex:sxc>=0?sexCell(r[sxc]):'',tm:!!own})}
+      out.push({team:own||team,city:city||'',fio:fio.replace(/\s+/g,' ').trim(),key:nk(fio),yob,grp:gv?gv+' в.г.':grpOf(yob),gd:!gv,rank,coach,day:c.day,dist:c.dist,ord:c.c,t:tv,oc,raw:String(v).trim(),sex:sxc>=0?sexCell(r[sxc]):'',tm:!!own})}
   }
   return out;
 }
@@ -889,7 +889,7 @@ function init(){
   $('fg').firstChild.textContent='Оба пола';
   const sx={};rows.forEach(r=>{if(r.sex)sx[nk(r.fio)]=r.sex});
   starts.forEach(x=>{if(x.sex)sx[x.key]=x.sex});
-  ents.forEach(e=>e.sex=sx[e.key]||'');
+  ents.forEach(e=>e.sex=sx[e.key]||e.sex||'');
   names=[...new Set([...comps.flatMap(c=>c.rows.map(r=>r.fio)),...ents.map(e=>e.fio),...starts.map(x=>x.fio)])].sort((x,y)=>x.localeCompare(y,'ru'));
   $('wl').innerHTML=names.map(n=>'<option value="'+esc(n)+'">').join('');
   const ue=k=>[...new Set(ents.map(e=>e[k]).filter(Boolean))];
@@ -940,7 +940,7 @@ function renderEnt(){
   const ev=new Map();
   L.slice().sort((x,y)=>x.day-y.day||x.ord-y.ord||x.sex.localeCompare(y.sex)||x.grp.localeCompare(y.grp)||(x.t??1e9)-(y.t??1e9)||x.fio.localeCompare(y.fio,'ru'))
    .forEach(e=>{const k=[e.day,e.dist,e.sex,e.grp].join('|');(ev.get(k)||ev.set(k,[]).get(k)).push(e)});
-  const row=(e,i)=>`<tr${e.t==null?' class="st"':''}><td class="pl">${i}</td><td><a class="nm" data-n="${esc(e.fio)}">${esc(e.fio)}</a></td><td>${esc(e.yob||'')}</td><td>${esc(rkS(e.rank))}</td><td>${esc(e.team)}</td><td class="t">${e.t!=null?esc(fS(e.t)):'без времени'}</td><td>${esc(e.coach)}</td></tr>`;
+  const row=(e,i)=>`<tr${e.t==null?' class="st"':''}><td class="pl">${i}</td><td><a class="nm" data-n="${esc(e.fio)}">${esc(e.fio)}</a></td><td>${esc(e.yob||'')}</td><td>${esc(rkS(e.rank))}</td><td>${esc(e.team)}</td><td class="t">${e.t!=null?esc(fS(e.t))+(e.oc?' <span class="mu">(вк)</span>':''):'без времени'}</td><td>${esc(e.coach)}</td></tr>`;
   let h='';
   for(const a of ev.values()){
     const e0=a[0];
@@ -1052,7 +1052,7 @@ function openAth(n){
   const k=nk(n),a=rows.filter(r=>nk(r.fio)===k),en=ents.filter(x=>x.key===k),sa=starts.filter(x=>x.key===k);
   if(!a.length&&!en.length&&!sa.length)return;
   const f=a[0]||en[0]||sa[0],md=[0,0,0];a.forEach(r=>{if(r.pl>=1&&r.pl<=3)md[r.pl-1]++});
-  const m=new Map(),ds=[...new Set(rows.map(r=>r.date).filter(Boolean))].sort((x,y)=>x.split('.').reverse().join().localeCompare(y.split('.').reverse().join())),fb=((comps.find(c=>c.file===curFile)||{}).lab||'').split(', ').pop()||'—',dl=n=>ds[n-1]||(ds.length===1&&n===1?ds[0]:ds.length?n+' день':fb);      // колонка «День»: везде дата, если она известна
+  const m=new Map(),ds=[...new Set(rows.map(r=>r.date).filter(Boolean))].sort((x,y)=>x.split('.').reverse().join().localeCompare(y.split('.').reverse().join())),fb=((comps.find(c=>c.file===curFile)||{}).lab||'').split(', ').pop()||'—',cat=allCat().find(x=>x.id===openId),dm=((cat&&cat.date)||'').match(/(\d{2})(?:\s*[–—-]\s*(\d{2}))?\.(\d{2})\.(\d{4})/),cds=dm?[dm[1]+'.'+dm[3]+'.'+dm[4]].concat(dm[2]?[dm[2]+'.'+dm[3]+'.'+dm[4]]:[]):[],dl=n=>ds[n-1]||(ds.length===1&&n===1?ds[0]:ds.length?n+' день':cds[n-1]||fb);      // колонка «День»: везде дата, если она известна
   en.forEach(x=>m.set(dkey(x.dist),{dist:x.dist,day:dl(x.day),ord:x.day*100+x.ord,e:x}));
   sa.forEach(x=>{const o=m.get(dkey(x.dist))||m.set(dkey(x.dist),{dist:x.dist,day:dl(x.day),ord:x.day*100+x.ev}).get(dkey(x.dist));o.s=x});
   a.forEach(r=>{const o=m.get(dkey(r.dist))||m.set(dkey(r.dist),{dist:r.dist,day:r.date,ord:(r.date&&r.date.startsWith('26')?2:1)*100+90}).get(dkey(r.dist));o.r=r});
@@ -1067,7 +1067,7 @@ function openAth(n){
     let df='';if(es!=null&&rs!=null){const d=rs-es;df=`<span style="color:${d<=0?'var(--ok)':'var(--bad)'};font-weight:600">${d>0?'+':d<0?'−':''}${Math.abs(d).toFixed(2).replace('.',',')} с</span>`}
     let dp='';if(pv&&rs!=null){const d=rs-pv.t;dp=`<span style="color:${d<=0?'var(--ok)':'var(--bad)'};font-weight:600">${d>0?'+':d<0?'−':''}${Math.abs(d).toFixed(2).replace('.',',')} с</span>`}
     const res=lg!=null?esc(fS(lg)):o.r?((o.r.pl?'<span style="font-weight:700">'+o.r.pl+' место</span><br>':'')+esc(o.r.st?o.r.st:fmtT(o.r.res))):'—';      // место и время — в две строки
-    return `<tr><td>${esc(o.day||fb)}</td><td>${esc(o.dist)}${o.r?', '+esc(o.r.grp||''):''}</td><td class="t">${o.e||o.s?(es!=null?esc(fS(es)):(o.s&&o.s.seedOff&&!o.e?'—':'без времени')):'—'}</td><td>${o.s?(o.s.heat!=null?'Заплыв '+fh(o.s.heat)+(o.s.lane?', дор. '+o.s.lane:''):'не сформирован'):'—'}</td><td class="t">${res}</td><td class="t">${df}</td><td class="t">${pv?esc(fS(pv.t))+'<div class="legs" style="min-width:0">'+esc(pv.lab)+'</div>':'—'}</td><td class="t">${dp}</td><td>${o.r?rcell(o.r):''}</td></tr>`}).join('');
+    return `<tr><td>${esc(o.day||fb)}</td><td>${esc(o.dist)}${(o.r||o.e)?', '+esc((o.r||o.e).grp||''):''}</td><td class="t">${o.e||o.s?(es!=null?esc(fS(es))+(o.e&&o.e.oc&&o.e.t===es?' (вк)':''):(o.s&&o.s.seedOff&&!o.e?'—':'без времени')):'—'}</td><td>${o.s?(o.s.heat!=null?'Заплыв '+fh(o.s.heat)+(o.s.lane?', дор. '+o.s.lane:''):'не сформирован'):'—'}</td><td class="t">${res}</td><td class="t">${df}</td><td class="t">${pv?esc(fS(pv.t))+'<div class="legs" style="min-width:0">'+esc(pv.lab)+'</div>':'—'}</td><td class="t">${dp}</td><td>${o.r?rcell(o.r):''}</td></tr>`}).join('');
   $('dn').textContent=n;
   $('db').innerHTML=`<p style="margin:0 0 10px;color:var(--mute)">${esc(f.yob||'')} г.р. · ${esc(f.team)}${f.city?', '+esc(f.city):''}<br>Тренер: ${esc(coach)}${a.length?`<br>Медали: золото ${md[0]}, серебро ${md[1]}, бронза ${md[2]}`:''}</p><div class="wrap"><table style="min-width:900px"><thead><tr><th>День<th>Дистанция<th>Заявка<th>Заплыв<th>Итог<th>Итог к заявке<th>Прошлый результат<th>Итог к прошлому<th>Разряд</thead><tbody>${tr}</tbody></table></div>${comps.length>1?`<p style="margin:10px 0 0"><button class="btn" data-cmp="${esc(n)}">Динамика по соревнованиям</button></p>`:''}`;
   if(!$('dlg').open)$('dlg').showModal();
