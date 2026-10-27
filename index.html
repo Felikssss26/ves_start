@@ -386,6 +386,10 @@ function parseEntryHdr(a){      // заявка, где колонка с фам
   return out;
 }
 function parseMatrix(a,fname,opts){
+  if(!parseMatrix.busy){      // лист начинается не с колонки A: пробуем сдвинуть так, чтобы «Фамилия» стояла во 2-й колонке; если не вышло — разбираем как есть
+    let off=0;for(const r of a){if(!r)continue;const j=r.findIndex(c=>typeof c==='string'&&/^\s*фамили/i.test(c));if(j>=0){off=Math.max(0,j-1);break}}
+    if(off>0){parseMatrix.busy=1;try{const r=parseMatrix(a.map(r=>r?r.slice(off):r),fname,opts);if(r.length)return r}finally{parseMatrix.busy=0}}
+  }
   const h=a.findIndex(r=>r&&typeof r[1]==='string'&&/фамили/i.test(r[1]));
   if(h<0){const e=parseEntryHdr(a);return e.length?e:(opts&&opts.entryDist?parseEntryLoose(a,opts.entryDist):[])}
   let team='';
