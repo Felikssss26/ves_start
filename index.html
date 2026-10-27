@@ -391,7 +391,7 @@ function parseMatrix(a,fname,opts){
   let team='';
   for(let i=0;i<=h&&!team;i++)for(const c of a[i]||[]){const m=typeof c==='string'&&c.match(/«([^»]+)»/);if(m){team=m[1].trim();break}}
   const w=team.split(' ')[0];if(/^[A-ZА-ЯЁ0-9\-]{3,}$/.test(w))team=w;
-  team=team||fname.replace(/\.[^.]+$/,'');
+  team=team||(/\d/.test(fname)?'—':fname.replace(/\.[^.]+$/,''));      // клуб в заявке не указан — подставится из итогов других соревнований
   const hd=a[h]||[],st=a[h+1]||[],mt=a[h+2]||[],cols=[],rowsD=[a[h-1]||[],hd];
   const dayAt=c=>{let d=1;for(let k=0;k<=c;k++)for(const rr of rowsD){const v=rr[k];if(typeof v!=='string')continue;const m=v.trim().match(/^(\d)\s*день|^(I{1,2}|І{1,2})\s*день/i);if(m)d=m[1]?+m[1]:m[2].length}return d};
   let cc=-1,yc=-1,rc=-1;
@@ -417,7 +417,7 @@ function parseMatrix(a,fname,opts){
     const own=nClub(scc>=0?txt(r,scc):(rc>=0?txt(r,rc+1):null)),city=ctc>=0?txt(r,ctc):(rc>=0&&scc<0?txt(r,rc+2):null);
     const gv=!dc.has(yi+1)&&typeof r[yi+1]==='number'&&r[yi+1]>=1&&r[yi+1]<=9?r[yi+1]:null;
     for(const c of cols){const v=r[c.c];if(v==null||String(v).trim()==='')continue;
-      const tv=tSec(v);if(tv==null&&!/^(б\/в|без|нт|н\/т)/i.test(String(v).trim()))continue;
+      const oc=/\s(вк|в\/к)\.?$/i.test(String(v).trim()),tv=tSec(oc?String(v).trim().replace(/\s*(вк|в\/к)\.?$/i,''):v);if(tv==null&&!/^(б\/в|без|нт|н\/т)/i.test(String(v).trim()))continue;
       out.push({team:own||team,city:city||'',fio:fio.replace(/\s+/g,' ').trim(),key:nk(fio),yob,grp:gv?gv+' в.г.':grpOf(yob),gd:!gv,rank,coach,day:c.day,dist:c.dist,ord:c.c,t:tv,raw:String(v).trim(),sex:sxc>=0?sexCell(r[sxc]):'',tm:!!own})}
   }
   return out;
@@ -1154,8 +1154,8 @@ function renderHome(){
     if(c.upcoming||!c.files.length){      // предстоящее соревнование: материалов ещё нет, карточка не открывается
       const d=c.start&&c.start.length===10?Math.round((new Date(c.start+'T00:00:00')-new Date(new Date().toDateString()))/864e5):null;
       const left=d==null||d<0?'':d===0?' Сегодня.':d===1?' Завтра.':' Через '+d+' дн.';
-      const dc=c.docs&&c.docs.length,tg=dc?'button':'div';
-      return `<${tg} class="ccard upc${dc?' hasdocs':''}"${dc?' data-open="'+esc(c.id)+'"':''}${artStyle(c)}><span class="cdate">${esc(c.date||'')}<b class="badge">Предстоящее</b></span><span class="ctitle">${esc(c.title)}</span><span class="cplace">${ICO}${placeHtml(c)}</span>${venueHtml(c)}${dc?'<span class="cchips"><i>Положение</i></span>':''}<span class="cnote">Материалы появятся после соревнования.${left}</span></${tg}>`;
+      const dc=c.docs&&c.docs.length,op=dc||kinds.length,tg=op?'button':'div';
+      return `<${tg} class="ccard upc${op?' hasdocs':''}"${op?' data-open="'+esc(c.id)+'"':''}${artStyle(c)}><span class="cdate">${esc(c.date||'')}<b class="badge">Предстоящее</b></span><span class="ctitle">${esc(c.title)}</span><span class="cplace">${ICO}${placeHtml(c)}</span>${venueHtml(c)}${(kinds.length||dc)?'<span class="cchips">'+kinds.map(k=>`<i>${esc(KINDS[k])}</i>`).join('')+(dc?'<i>Положение</i>':'')+'</span>':''}<span class="cnote">${kinds.length?'Итоги появятся после соревнования.':'Материалы появятся после соревнования.'}${left}</span></${tg}>`;
     }
     const pre=!kinds.includes('itog');      // есть стартовый протокол или заявка, итогов ещё нет
     return `<button class="ccard${pre?' pre':''}" data-open="${esc(c.id)}"${artStyle(c)}><span class="cdate">${esc(c.date||'')}${pre?'<b class="badge">Итогов пока нет</b>':''}</span><span class="ctitle">${esc(c.title)}</span>`+
@@ -1178,7 +1178,7 @@ function updateTabs(){
 }
 // открыть соревнование: подтягиваются его файлы и (для сравнения) итоги остальных соревнований
 async function openCompetition(id,push=true){
-  const c=allCat().find(x=>x.id===id);if(!c||opening||((c.upcoming||!c.files.length)&&!(c.docs&&c.docs.length)))return;
+  const c=allCat().find(x=>x.id===id);if(!c||opening||!(c.files.length||(c.docs&&c.docs.length)))return;
   opening=true;$('ld').classList.add('on');$('sub').textContent='Загрузка материалов…';$('err').textContent='';
   try{
     rows=[];ents=[];starts=[];efiles={};sfiles={};comps=[];resNotes=[];picked=false;curFile='';homeLoaded=false;
@@ -1197,6 +1197,8 @@ async function openCompetition(id,push=true){
     }
     for(const k of comps){const o=allCat().find(z=>z.files.some(f=>f.name===k.file));if(o&&!o.user){k.label=[o.short||o.title,o.date].filter(Boolean).join(', ');const t=/^\d{4}-\d{2}-\d{2}/.test(o.start||'')?Date.parse(o.start.slice(0,10)):NaN;if(!isNaN(t))k.ts=t}}      // дата из каталога — основа хронологического порядка
     ents=Object.values(efiles).flat();starts=Object.values(sfiles).flat();
+    const who=new Map();comps.forEach(c=>c.rows.forEach(r=>{if(r.team&&r.team!=='—')who.set(nk(r.fio),r)}));      // клуб в заявке не указан — берём из итогов прошлых соревнований
+    [...ents,...starts].forEach(x=>{if((!x.team||x.team==='—')&&who.has(x.key)){const m=who.get(x.key);x.team=m.team;x.city=x.city||m.city||''}});
     if(mine.length){curFile=comps.filter(k=>mine.includes(k.file)).sort((x,y)=>y.ts-x.ts)[0].file;picked=true}
     pickCurrent();
     if(!mine.length){rows=[];resNotes=[];curFile=''}
