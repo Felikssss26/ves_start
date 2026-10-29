@@ -413,17 +413,18 @@ function parseMatrix(a,fname,opts){
   if(!cols.length)return [];
   const lab=re=>{for(let k=h;k<=h+2&&k<a.length;k++){const j=(a[k]||[]).findIndex(c=>typeof c==='string'&&re.test(c.trim()));if(j>=0)return j}return -1};
   const sxc=lab(/^пол$/i),scc=lab(/^школ/i),ctc=lab(/^город/i);
-  const dc=new Set(cols.map(x=>x.c)),yi=yc>=0?yc:2,ri=rc>=0?rc:3,out=[];
+  const dc=new Set(cols.map(x=>x.c)),yi=yc>=0?yc:2,ri=rc>=0?rc:3,out=[];let bs='';for(let k=Math.max(0,h-3);k<h;k++){const v=(a[k]||[])[1];if(typeof v==='string'&&SEXW.test(v.trim()))bs=sexWord(v)}
   const txt=(r,i)=>i>=0&&!dc.has(i)&&typeof r[i]==='string'&&r[i].trim()&&tSec(r[i])==null?r[i].replace(/\s+/g,' ').trim():null;
   for(let i=h+1;i<a.length;i++){
     const r=a[i]||[],fio=r[1];
+    if(typeof fio==='string'&&SEXW.test(fio.trim())){bs=sexWord(fio);continue}      // блок «Девочки»/«Мальчики» отдельной строкой
     if(typeof fio!=='string'||!fio.trim()||/фамили/i.test(fio))continue;
     const yob=parseInt(r[yi])||null,rank=nRank(r[ri])||'',coach=cc>=0&&r[cc]?String(r[cc]).trim():'';
     const own=nClub(scc>=0?txt(r,scc):(rc>=0?txt(r,rc+1):null)),city=ctc>=0?txt(r,ctc):(rc>=0&&scc<0?txt(r,rc+2):null);
     const gv=!dc.has(yi+1)&&typeof r[yi+1]==='number'&&r[yi+1]>=1&&r[yi+1]<=9?r[yi+1]:null;
     for(const c of cols){const v=r[c.c];if(v==null||String(v).trim()==='')continue;
       const oc=/\s(вк|в\/к)\.?$/i.test(String(v).trim()),tv=tSec(oc?String(v).trim().replace(/\s*(вк|в\/к)\.?$/i,''):v);if(tv==null&&!/^(б\/в|без|нт|н\/т)/i.test(String(v).trim()))continue;
-      out.push({team:own||team,city:city||'',fio:fio.replace(/\s+/g,' ').trim(),key:nk(fio),yob,grp:gv?gv+' в.г.':grpOf(yob),gd:!gv,rank,coach,day:c.day,dist:c.dist,ord:c.c,t:tv,oc,raw:String(v).trim(),sex:sxc>=0?sexCell(r[sxc]):'',tm:!!own})}
+      out.push({team:own||team,city:city||'',fio:fio.replace(/\s+/g,' ').trim(),key:nk(fio),yob,grp:gv?gv+' в.г.':grpOf(yob),gd:!gv,rank,coach,day:c.day,dist:c.dist,ord:c.c,t:tv,oc,raw:String(v).trim(),sex:sxc>=0?sexCell(r[sxc]):bs,tm:!!own})}
   }
   return out;
 }
@@ -458,21 +459,23 @@ function parseStartMatrix(a,defD){
   const hasDay=a.some(r=>r&&r.some(c=>typeof c==='string'&&/\d\s*день/i.test(c)));
   const isLbl=x=>/^(№.*|в\.?\s?г\.?|фио|ф\.?\s?и\..*|гр(?:уппа|\.)?|г\.?\s?р\.?|школ.*|город.*|разряд|результат|тренер|заявоч.*|время|причина.*)$/i.test(x.trim());
   const out=[],seen=new Set(),evs={};
-  let day=1,date='',dist='',sex='',grp='',heat=null,used=false,lastHeat=null;let perEv=false;{let l=null,n=0;for(const r of a){const h=r&&heatHdr(r);if(h==null||h===false)continue;if(l!=null&&h<l)n++;l=h}perEv=n>=3}      // нумерация заплывов начинается заново в каждом виде — это не новый день
+  let day=1,date='',dist='',sex='',grp='',heat=null,used=false,lastHeat=null,sub=0,oc=false,skip=false;let perEv=false;{let l=null,n=0;for(const r of a){const h=r&&heatHdr(r);if(h==null||h===false)continue;if(l!=null&&h<l)n++;l=h}perEv=n>=3}      // нумерация заплывов начинается заново в каждом виде — это не новый день
 
   for(const r of a.slice(0,6))for(const c of r||[])if(!date&&typeof c==='string'){const d=ruDate(c);if(d&&!d.includes('-'))date=d}
   for(let ri=0;ri<a.length;ri++){
     const r=a[ri];if(!r)continue;
-    const hn=heatHdr(r);if(hn!=null){if(!hasDay&&lastHeat!=null&&hn<lastHeat&&!perEv)day++;lastHeat=hn;heat=hn;used=false;continue}
+    if(!skip&&[r[1],r[2],r[3]].some(v=>typeof v==='string'&&/^\s*заплыв\s*$/i.test(v))){sub++;heat=Math.floor(lastHeat||0)+sub/100;used=false;continue}      // «заплыв» без номера — продолжение предыдущего номера (68 → 68 А, 68 Б)
+    let hn=heatHdr(r);if(hn!=null){if(!hasDay&&lastHeat!=null&&hn<lastHeat&&!perEv)day++;if(hn===lastHeat&&used)hn=lastHeat+1;sub=0;lastHeat=hn;heat=hn;used=false;skip=false;continue}      // повтор номера заплыва в опечатке — следующий номер
+    if(skip&&!(r.some(c=>typeof c==='string'&&/г\.?\s?р\.?$/i.test(c.trim()))||[r[0],r[1],r[2],r[3],r[4]].some(x=>typeof x==='string'&&/день/i.test(x))))continue;
     const nv=r[C.name],name=typeof nv==='string'?nv.replace(/\s+/g,' ').trim():'';
     const ym=String(r[C.yob]??'').match(/\d{4}/),yob=ym?+ym[0]:null;
-    if(name&&yob&&(dist||defD)){
+    if(name&&yob&&(dist||defD)&&!skip){
       const dd=dist||defD,ek=day+'|'+dd+'|'+sex;if(!(ek in evs))evs[ek]=Object.keys(evs).length+1;
       const key=nk(name),dk=[ek,key,heat].join('|');
       if(heat==null&&seen.has(dk))continue;seen.add(dk);used=true;
       const school=C.school>=0&&r[C.school]?nClub(r[C.school]):'',city=C.city>=0&&r[C.city]?String(r[C.city]).trim():'';
-      const gc=C.grp>=0?r[C.grp]:null,gv=typeof gc==='number'?gc+' в.г.':(typeof gc==='string'&&/^вк$/i.test(gc.trim())?'вне конкурса':'');
-      out.push({day,date,dist:dd,ev:evs[ek],sex,heat,lane:typeof r[numCol(r,C)]==='number'?r[numCol(r,C)]:null,grp:gv||grpOf(yob),gd:!gv,
+      const gc=C.grp>=0?r[C.grp]:null,gv=typeof gc==='number'?gc+' в.г.':((typeof gc==='string'&&/^вк$/i.test(gc.trim()))||oc?'вне конкурса':'');
+      out.push({day,date,dist:dd,ev:evs[ek],sex,heat,oc:gv==='вне конкурса'||undefined,lane:typeof r[numCol(r,C)]==='number'?r[numCol(r,C)]:null,grp:gv||grpOf(yob),gd:!gv,
         fio:name,key,yob,rank:C.rank>=0?nr(r[C.rank]):'',school,city,team:school||(city?city+' (школа не указана)':'—'),
         seed:C.res>=0?tSec(r[C.res]):null,coach:C.coach>=0&&r[C.coach]?String(r[C.coach]).replace(/\s+/g,' ').trim():''});
       continue;
@@ -480,12 +483,14 @@ function parseStartMatrix(a,defD){
     const t=[r[0],r[1],r[2],r[3],r[4]].find(x=>typeof x==='string'&&x.trim()&&!isLbl(x)&&!/^\d+$/.test(x.trim()));
     if(!t)continue;
     const tl=t.trim().toLowerCase();
-    if(/день/.test(tl)){const m=tl.match(/(\d)\s*день/);if(m)day=+m[1];date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0];dist=sex=grp='';if(used)heat=null;continue}
+    if(/день/.test(tl)){const m=tl.match(/(\d)\s*день/);if(m)day=+m[1];date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0];dist=sex=grp='';oc=false;skip=false;if(used)heat=null;continue}
     if(/^\d{2}-\d{2}|^стартовый|^итоговый|^протокол|^гл\.|^представитель|^директор/.test(tl))continue;
-    if(/^\d\s*(?:в\.?\s*г|воз(?:р)?\.?\s*гр)/.test(tl)){grp=tl[0]+' в.г.';continue}
+    if(/^эстафет/.test(tl)){skip=true;dist=sex=grp='';oc=false;continue}      // эстафеты в разбор заплывов не включаем
+    if(/^\d(?:\s*,\s*\d)*\s*(?:в\.?\s*г|воз(?:р)?\.?\s*гр)/.test(tl)){grp=tl[0]+' в.г.';continue}
+    {const vm=tl.match(/^(девочки|девушки|мальчики|юноши)?\s*вк$/);if(vm){if(vm[1])sex=sexWord(vm[1]);oc=true;if(used)heat=null;continue}}
     if(SEXW.test(tl)){sex=sexWord(tl);if(used)heat=null;continue}
     if(ri<hi&&!DISTRE.test(t))continue;
-    dist=nDist(t);sex=grp='';if(used)heat=null;
+    dist=nDist(t);sex=grp='';oc=false;skip=false;if(used)heat=null;
   }
   return out;
 }
