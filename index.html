@@ -441,7 +441,7 @@ const nDist=d=>{
   if(/^многоборь/.test(t))return 'Многоборье (сумма)';
   const rl=t.match(/^(\d+)\s*[хx×]\s*(\d+)\s*м?\s*(?:к\/п|комплекс|комлекс)/);
   if(rl)return rl[1]+'×'+rl[2]+' м комплексное плавание (раздельный старт)';
-  return t.replace(/^(\d+)\s*м(?=\s|$)/,'$1 м').replace('комлексное','комплексное').replace('к/п','комплексное плавание').replace('в/с','вольный стиль').replace('н/с','на спине').replace(/(^|\s)батт\.?(?=\s|$)/,'$1баттерфляй').replace(/^(\d+) (?!м )/,'$1 м ');
+  return t.replace(/^(\d+)\s*м(?=\s|$)/,'$1 м').replace('комлексное','комплексное').replace('к/п','комплексное плавание').replace(/(^|\s)кп(?=\s|$)/,'$1комплексное плавание').replace('в/с','вольный стиль').replace('н/с','на спине').replace(/(^|\s)батт\.?(?=\s|$)/,'$1баттерфляй').replace(/^(\d+) (?!м )/,'$1 м ');
 };
 const nr=x=>x==null?'':(nRank(x)||'');
 function parseStartMatrix(a,defD){
@@ -488,7 +488,7 @@ function parseStartMatrix(a,defD){
     if(/^\d{2}-\d{2}|^стартовый|^итоговый|^протокол|^гл\.|^представитель|^директор/.test(tl))continue;
     if(/^эстафет/.test(tl)){skip=true;dist=sex=grp='';oc=false;continue}      // эстафеты в разбор заплывов не включаем
     if(/^\d(?:\s*,\s*\d)*\s*(?:в\.?\s*г|воз(?:р)?\.?\s*гр)/.test(tl)){grp=tl[0]+' в.г.';oc=false;continue}
-    {const vm=tl.match(/^(девочки|девушки|мальчики|юноши)?\s*вк$/);if(vm){if(vm[1])sex=sexWord(vm[1]);oc=true;if(used)heat=null;continue}}
+    {const vm=tl.match(/^(девочки|девушки|мальчики|юноши)?\s*вк$/);if(vm){if(vm[1])sex=sexWord(vm[1]);oc=day>1;if(used)heat=null;continue}}
     if(SEXW.test(tl)){sex=sexWord(tl);oc=false;if(used)heat=null;continue}      // обычный блок «Девочки»/«Мальчики» после ВК снимает пометку
     if(ri<hi&&!DISTRE.test(t))continue;
     dist=nDist(t);sex=grp='';oc=false;skip=false;if(used)heat=null;
@@ -514,7 +514,7 @@ const MON={января:1,февраля:2,марта:3,апреля:4,мая:5,
 const ruDate=s=>{const m=String(s??'').match(/(\d{1,2})(?:\s*[-–]\s*(\d{1,2}))?\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+(\d{4})/i);if(!m)return '';const p=n=>String(n).padStart(2,'0');return (m[2]?p(m[1])+'-'+p(m[2]):p(m[1]))+'.'+p(MON[m[3].toLowerCase()])+'.'+m[4]};
 const defDistOf=a=>{for(const r of a.slice(0,12)){if(!r||!(r.some(c=>typeof c==='string'&&NAMEL.test(c.trim()))||(r.filter((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c)).length===1&&r.some(c=>typeof c==='string'&&/^г\.?\s?р\.?$/i.test(c.trim())))))continue;const c=r.find((c,k)=>k>1&&typeof c==='string'&&DISTRE.test(c));if(c)return nDist(c)}return ''};
 const SEXW=/^(девочки|мальчики|девушки|юноши)$/i;
-const DISTRE=/^\s*(?:\d+\s*[хx×]\s*)?\d+\s*м?\s*(?:к\/п|н\/с|в\/с|брасс|батт|вольн|на\s+спине|комплекс|комлекс)/i;
+const DISTRE=/^\s*(?:\d+\s*[хx×]\s*)?\d+\s*м?\s*(?:к\/?п|н\/с|в\/с|брасс|батт|вольн|на\s+спине|комплекс|комлекс)/i;
 const HLAB=/г\.?\s?р|школ|город|результат|разряд|тренер|сумма|^в\.?\s?г/i;
 const sexWord=t=>/^(девочки|девушки)$/i.test(t.trim())?'Девочки':'Мальчики';
 const sexCell=v=>{const t=String(v??'').trim().toLowerCase();return /^(ж|д|f|дев)/.test(t)?'Девочки':/^(м|m|мал|юн)/.test(t)?'Мальчики':''};
@@ -585,8 +585,8 @@ function parseResultsMatrix(a,defD){
     if(/^итогов/.test(tl)){skip=false;continue}
     if(!t||NAMEL.test(tl)||/^гл\./.test(tl)||/^\d{2}-\d{2}/.test(tl))continue;
     if(/день/.test(tl)){dayN=/^\s*2/.test(tl)?2:1;date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0]||date;continue}
-    if(/^\d\s*(?:в\.?\s*г|воз(?:р)?\.?\s*гр)\.?$/.test(tl)){grp=tl[0]+' в.г.';continue}
-    if(SEXW.test(tl)){sex=sexWord(tl);blk++;continue}
+    if(/^\d\s*(?:(?:в\.?\s*)?\.?\s*г|воз(?:р)?\.?\s*гр)\.?$/.test(tl)){grp=tl[0]+' в.г.';continue}
+    if(/^(девочки|девушки|мальчики|юноши)(\s+вк)?$/.test(tl)){sex=sexWord(tl.split(' ')[0]);blk++;continue}      // «Девочки ВК» — это тоже блок пола
     if(!seenH&&!DISTRE.test(t))continue;
     dist=nDist(t);sex=grp='';
   }
