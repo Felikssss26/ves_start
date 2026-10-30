@@ -276,6 +276,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
         <input type="search" id="sq" placeholder="Поиск: фамилия, тренер">
         <input type="number" id="sh" min="1" placeholder="№ заплыва">
         <select id="sd"></select><select id="ss"></select><select id="sg"></select><select id="sp"></select><select id="st"></select>
+        <button class="btn ghost" id="srst" style="color:var(--ink)">Сбросить</button>
       </div>
       <div class="count" id="scnt"></div>
       <div class="wrap"><table><thead><tr><th>Дор.<th>ФИО<th>Г.р.<th>Группа<th>Разряд<th>Клуб<th>Заявка<th>Тренер</thead><tbody id="stb"></tbody></table></div>
@@ -921,6 +922,7 @@ function showTab(t){
 $('tabs').onclick=e=>{if(e.target.dataset.t)showTab(e.target.dataset.t)};
 ['eq','ed','es','eg','ep','et','eh'].forEach(id=>$(id).addEventListener('input',renderEnt));
 ['sq','sh','sd','ss','sg','sp','st'].forEach(id=>$(id).addEventListener('input',renderSta));
+$('srst').onclick=()=>{['sq','sh','sd','ss','sg','sp','st'].forEach(i=>$(i).value='');renderSta()};
 function renderSta(){
   const tb=$('stb');
   if(!starts.length){tb.innerHTML='<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mute)">Стартовый протокол не загружен. Добавьте файл стартового протокола (.xlsx).</td></tr>';$('scnt').textContent='';return}
