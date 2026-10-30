@@ -167,11 +167,11 @@
   "pool": "25 м",
   "date": "30–31.10.2026",
   "start": "2026-10-30",
-  "upcoming": true,
   "files": [
    {
     "name": "zolotaia_osen_2026.xlsx",
     "kinds": [
+     "itog",
      "start",
      "zayavka"
     ]
