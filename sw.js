@@ -1,5 +1,5 @@
 // Весёлые старты — офлайн-кэш. При изменении файлов приложения увеличьте номер версии V.
-const V='ves-v69';
+const V='ves-v70';
 const SHELL=["./", "./index.html", "./manifest.webmanifest", "./lib/jszip.min.js", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/maskable-512.png", "./icons/apple-touch-icon.png", "./icons/favicon.png", "./data/index.json", "./data/pervenstvo_pmr_2026.xlsx", "./data/mercishor_2026.xlsx", "./data/mercichor_2025.xlsx", "./data/zolotaia_osen_2025.xlsx", "./data/super_sprint_2025.xlsx", "./data/shvets_kovalenko_2026.xlsx", "./data/super_sprint_2026.xlsx", "./data/polozhenie_zolotaia_osen_2026_1.jpg", "./data/polozhenie_zolotaia_osen_2026_2.jpg", "./data/polozhenie_super_sprint_2026_1.jpg", "./data/polozhenie_super_sprint_2026_2.jpg", "./data/polozhenie_pervenstvo_pmr_2026_1.jpg", "./data/polozhenie_pervenstvo_pmr_2026_2.jpg", "./data/zolotaia_osen_2026.xlsx"];
 const CDN=['https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'];
 self.addEventListener('install',e=>{e.waitUntil((async()=>{
@@ -17,7 +17,7 @@ self.addEventListener('fetch',e=>{
   e.respondWith((async()=>{
     const c=await caches.open(V),u=new URL(r.url);
     if(r.mode==='navigate'){                        // страница: сначала сеть, без сети — из кэша
-      try{const n=await fetch(r);if(n.ok)c.put('./index.html',n.clone());return n}
+      try{const n=await fetch(r.url,{cache:'no-cache'});if(n.ok)c.put('./index.html',n.clone());return n}
       catch(_){return (await c.match('./index.html'))||Response.error()}
     }
     if(u.origin===location.origin&&u.pathname.includes('/data/')){   // данные: сначала сеть, без сети — из кэша
