@@ -487,9 +487,9 @@ function parseStartMatrix(a,defD){
     if(/день/.test(tl)){const m=tl.match(/(\d)\s*день/);if(m)day=+m[1];date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0];dist=sex=grp='';oc=false;skip=false;if(used)heat=null;continue}
     if(/^\d{2}-\d{2}|^стартовый|^итоговый|^протокол|^гл\.|^представитель|^директор/.test(tl))continue;
     if(/^эстафет/.test(tl)){skip=true;dist=sex=grp='';oc=false;continue}      // эстафеты в разбор заплывов не включаем
-    if(/^\d(?:\s*,\s*\d)*\s*(?:в\.?\s*г|воз(?:р)?\.?\s*гр)/.test(tl)){grp=tl[0]+' в.г.';continue}
+    if(/^\d(?:\s*,\s*\d)*\s*(?:в\.?\s*г|воз(?:р)?\.?\s*гр)/.test(tl)){grp=tl[0]+' в.г.';oc=false;continue}
     {const vm=tl.match(/^(девочки|девушки|мальчики|юноши)?\s*вк$/);if(vm){if(vm[1])sex=sexWord(vm[1]);oc=true;if(used)heat=null;continue}}
-    if(SEXW.test(tl)){sex=sexWord(tl);if(used)heat=null;continue}
+    if(SEXW.test(tl)){sex=sexWord(tl);oc=false;if(used)heat=null;continue}      // обычный блок «Девочки»/«Мальчики» после ВК снимает пометку
     if(ri<hi&&!DISTRE.test(t))continue;
     dist=nDist(t);sex=grp='';oc=false;skip=false;if(used)heat=null;
   }
