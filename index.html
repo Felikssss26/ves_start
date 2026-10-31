@@ -308,7 +308,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
 <script>
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let rows=[],ents=[],efiles={},names=[],starts=[],sfiles={},resNotes=[],comps=[],curFile="",picked=false;
+let relays=[],rows=[],ents=[],efiles={},names=[],starts=[],sfiles={},resNotes=[],comps=[],curFile="",picked=false;
 const KEYS={'Дата':'date','Дистанция':'dist','Пол':'sex','Группа':'grp','Место':'pl','ФИО':'fio','Г.р.':'yob','Разряд':'rank','Школа / клуб':'club','Город':'city','Результат':'res','Выполнен разряд':'rank2','Тренер':'coach','Статус':'st','Команда':'team'};
 function fmtT(v){
   if(typeof v!=='number')return v?String(v):'';
@@ -556,13 +556,13 @@ function parseResultsMatrix(a,defD){
     if(!title&&/протокол/i.test(c))title=c.trim();
   }
   const notes=[],R=[],DEF={name:1,yob:2,rank:3,school:4,city:5,res:6,rank2:7,coach:8,grp:-1};
-  let dayN=1,date=/^\d{2}\.\d{2}\.\d{4}$/.test(dt)?dt:'',dist=defD||'',sex='',grp='',skip=false,blk=0,C=null,seenH=false,legCols=null;
+  let dayN=1,date=/^\d{2}\.\d{2}\.\d{4}$/.test(dt)?dt:'',dist=defD||'',sex='',grp='',skip=false,blk=0,C=null,seenH=false,legCols=null,rel='',RL=[];
   const clean=v=>v==null||String(v).trim()===''?null:String(v).replace(/\s+/g,' ').trim();
   for(let i=0;i<a.length;i++){
     const r=a[i];if(!r)continue;
     const isH=r.some(c=>typeof c==='string'&&NAMEL.test(c.trim()))||(r.some((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c))&&r.some(c=>typeof c==='string'&&/^г\.?\s?р\.?$/i.test(c.trim())))||(SEXW.test(String(r[1]??'').trim())&&r.some((c,k)=>k!==1&&typeof c==='string'&&(HLAB.test(c.trim())||DISTRE.test(c))));
     if(isH){
-      seenH=true;const L=layoutAt(a,i);if(L.name>=0&&L.yob>=0&&L.res>=0)C=(C&&!L.lab&&C.name===L.name&&C.yob===L.yob)?C:L;      // заголовок без подписи «результат» наследует раскладку предыдущего
+      rel='';seenH=true;const L=layoutAt(a,i);if(L.name>=0&&L.yob>=0&&L.res>=0)C=(C&&!L.lab&&C.name===L.name&&C.yob===L.yob)?C:L;      // заголовок без подписи «результат» наследует раскладку предыдущего
       if(SEXW.test(String(r[1]??'').trim())){sex=sexWord(String(r[1]));blk++}
       const dcs=r.filter((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c)),dl=r.findIndex((c,k)=>k>=2&&typeof c==='string'&&DISTRE.test(c));
       if(dcs.length>=3&&!dcs.some(c=>/\d\s*[хx×]\s*\d/i.test(c))&&C&&L&&/сумма|итого/i.test(r.map(x=>String(x??'')).join(' '))){const mm=String(dcs[0]).match(/^\s*(\d+)/);dist=dcs.length+'×'+(mm?mm[1]:'25')+' м комплексное плавание (раздельный старт)';grp='';
@@ -573,6 +573,10 @@ function parseResultsMatrix(a,defD){
       continue;
     }
     const Z=C||DEF,B=r[Z.name],cell=r[Z.res],G=typeof cell==='number'?String(cell):String(cell??'').trim(),ym=String(r[Z.yob]??'').match(/\d{4}/);
+    if(rel&&typeof B==='string'&&B.trim()&&!/^(\d(?:\s*,\s*\d)*\s*(?:в\s*\.?\s*)?\.?\s*г\.?|итого.*)$/i.test(B.trim())&&G){      // строка эстафетной команды
+      const pm=typeof r[numCol(r,Z)]==='number'?r[numCol(r,Z)]:null,sc=tSec(G),lw=G.toLowerCase().replace(/[\s\/\\.]/g,'');
+      RL.push({date,dist:rel,sex:'Смешанная',grp,pl:pm,fio:/\(/.test(B)?clean(B):nClub(clean(B)),club:nClub(clean(r[Z.school])),city:clean(r[Z.city]),sec:sc,st:sc!=null?null:(lw==='ня'?'не явился':lw==='дк'?'дисквалификация':null),res:G,team:nClub(clean(r[Z.school]))||clean(B)});
+      continue}
     const isath=typeof B==='string'&&!NAMEL.test(B.trim())&&!/^результат/i.test(G)&&(typeof r[0]==='number'||(G&&ym));
     if(isath){
       if(!dist||skip)continue;
@@ -581,16 +585,18 @@ function parseResultsMatrix(a,defD){
       continue;
     }
     const t=[r[0],r[1],r[2],r[3]].map(x=>typeof x==='string'?x.trim():'').find(x=>x&&!/^№/.test(x)&&!/^\d+$/.test(x))||'',tl=t.toLowerCase();
+    if(/^эстафет/.test(tl)){const m=tl.match(/(\d+)\s*[хx×]\s*(\d+)/);rel='Эстафета '+(m?m[1]+'×'+m[2]+' м':'')+(/комб/.test(tl)?' комбинированная':/в\/?с|вольн/.test(tl)?' вольный стиль':'')+(/смеш/.test(tl)?', смешанная':'');grp='';continue}
     if(/заплыв/.test(tl)){skip=true;continue}
     if(/^итогов/.test(tl)){skip=false;continue}
     if(!t||NAMEL.test(tl)||/^гл\./.test(tl)||/^\d{2}-\d{2}/.test(tl))continue;
-    if(/день/.test(tl)){dayN=/^\s*2/.test(tl)?2:1;date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0]||date;continue}
+    if(/день/.test(tl)){rel='';dayN=/^\s*2/.test(tl)?2:1;date=(t.match(/\d\d\.\d\d\.\d{4}/)||[''])[0]||date;continue}
     if(/^\d\s*(?:(?:в\.?\s*)?\.?\s*г|воз(?:р)?\.?\s*гр)\.?$/.test(tl)){grp=tl[0]+' в.г.';continue}
     if(/^(девочки|девушки|мальчики|юноши)(\s+вк)?$/.test(tl)){sex=sexWord(tl.split(' ')[0]);blk++;continue}      // «Девочки ВК» — это тоже блок пола
     if(!seenH&&!DISTRE.test(t))continue;
     dist=nDist(t);sex=grp='';
   }
-  if(R.length<5||!R.some(x=>x.res!==''))return null;      // пустой шаблон итогового протокола без результатов не берём
+  if(R.length<5||!R.some(x=>x.res!==''))return null;
+  RL.forEach(x=>{if(x.sec!=null)x.res=fS(x.sec)});      // эстафеты хранятся отдельно от личных результатов      // пустой шаблон итогового протокола без результатов не берём
   const bump=(m,k)=>m.set(k,(m.get(k)||0)+1);
   for(const x of R){
     let m=x.res.match(/^(\d+)[,.](\d\d)[,.](\d{1,2})$/);
@@ -639,7 +645,7 @@ function parseResultsMatrix(a,defD){
   const gr={'Девочки':0,'Мальчики':1};
   D.sort((p,q)=>order.indexOf(p.dayN+'|'+p.dist)-order.indexOf(q.dayN+'|'+q.dist)||(gr[p.sex]??2)-(gr[q.sex]??2)||p.grp.localeCompare(q.grp)||(p.mesto??999)-(q.mesto??999)||p.row-q.row);
   const norank=!R.some(x=>x.rank);      // в протоколе нет колонки с имеющимся разрядом — изменение разряда не считаем
-  return {notes,meta:{title,dt,blocks},rows:D.map(x=>({norank,legs:x.legs,date:x.date,dist:x.dist,sex:x.sex,grp:x.grp,pl:x.mesto,fio:x.fio,yob:x.yob,rank:x.rank,club:x.school,city:x.city,
+  return {relay:RL,notes,meta:{title,dt,blocks},rows:D.map(x=>({norank,legs:x.legs,date:x.date,dist:x.dist,sex:x.sex,grp:x.grp,pl:x.mesto,fio:x.fio,yob:x.yob,rank:x.rank,club:x.school,city:x.city,
     res:x.sec!=null?(x.bad?x.res.replace(',',':'):x.sec/86400):null,rank2:x.sec!=null?x.rank2:null,coach:x.coach,st:x.st,
     team:x.school||(x.city?x.city+' (школа не указана)':'—')}))};
 }
@@ -652,13 +658,13 @@ function showNotes(){
 }
 
 // ---- несколько соревнований: хранение и выбор текущего
-function addComp(file,rr,notes,meta){
+function addComp(file,rr,notes,meta,relay){
   const base=file.replace(/\.[^.]+$/,''),src=(meta&&meta.dt)||(rr[0]&&rr[0].date)||'',m=src.match(/(\d{2})(?:\s*[-–—]\s*\d{2})?\.(\d{2})\.(\d{4})/);
   let label=base;
   if(meta&&(meta.title||meta.dt))label=[(meta.title||'').replace(/^итоговый\s+протокол\s*/i,'').trim(),meta.dt].filter(Boolean).join(', ');
   else if(m)label=base+' ('+m[0]+')';
   comps=comps.filter(c=>c.file!==file);
-  comps.push({file,label,ts:m?Date.UTC(+m[3],+m[2]-1,+m[1]):0,rows:rr,notes});
+  comps.push({file,label,ts:m?Date.UTC(+m[3],+m[2]-1,+m[1]):0,rows:rr,notes,relay:relay||[]});
 }
 function pickCurrent(){
   if(!comps.length)return;
@@ -667,7 +673,7 @@ function pickCurrent(){
   comps.forEach(c=>c.lab=cnt[c.label]>1?c.label+' · '+c.file.replace(/\.[^.]+$/,''):c.label);
   let c=comps.find(x=>x.file===curFile);
   if(!c||!picked)c=comps[comps.length-1];
-  curFile=c.file;rows=c.rows;resNotes=c.notes;
+  curFile=c.file;rows=c.rows;resNotes=c.notes;relays=c.relay||[];
 }
 function initCmp(){
   $('cbar').classList.toggle('hide',comps.length<2);
@@ -733,7 +739,7 @@ function renderCmp(o){
     box.innerHTML=wrapT(200+comps.length*150,'<th>Клуб'+comps.map(c=>th(c.lab)).join(''),L.map(([n,o])=>`<tr><td><b>${esc(n)}</b></td>`+o.map(x=>x.p.size?`<td class="t">${x.m.join(' / ')}<br><span style="color:var(--mute);font-weight:400">уч.: ${x.p.size}</span></td>`:'<td>—</td>').join('')+'</tr>').join(''))+hint;
   }
 }
-$('cs').addEventListener('change',()=>{picked=true;curFile=$('cs').value;const c=comps.find(x=>x.file===curFile);rows=c.rows;resNotes=c.notes;showNotes();init()});
+$('cs').addEventListener('change',()=>{picked=true;curFile=$('cs').value;const c=comps.find(x=>x.file===curFile);rows=c.rows;resNotes=c.notes;relays=c.relay||[];showNotes();init()});
 ['cm','ca','cd','cx','cg'].forEach(id=>$(id).addEventListener('input',()=>renderCmp()));
 
 // ---- разрядные нормативы (мальчики / юноши), порядок: МСМК, МС, КМС, 1, 2, 3, 1 юн., 2 юн.; «-» — норматива нет
@@ -828,7 +834,7 @@ function renderNorms(){
 }
 renderNorms();
 function parseWorkbook(wb,fname,opts){
-  const mx=n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:null,raw:true}),st=[],ent=[],rr=[],notes=[];let meta=null;
+  const mx=n=>XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,defval:null,raw:true}),st=[],ent=[],rr=[],rl=[],notes=[];let meta=null;
   const defD=wb.SheetNames.map(n=>defDistOf(mx(n))).find(Boolean)||'',stKeys=new Map();
   for(const n of wb.SheetNames){
     const a=mx(n),en=parseMatrix(a,fname,opts);
@@ -840,7 +846,7 @@ function parseWorkbook(wb,fname,opts){
     own.forEach((x,k)=>stKeys.set(k,x));
     ent.push(...en);
     const pr=en.length?null:parseResultsMatrix(a,defD);      // лист заявки не принимаем за итоги (в нём тоже есть времена)
-    if(pr&&pr.rows.length){rr.push(...pr.rows);notes.push(...pr.notes);meta=meta||pr.meta}
+    if(pr&&pr.rows.length){rl.push(...(pr.relay||[]));rr.push(...pr.rows);notes.push(...pr.notes);meta=meta||pr.meta}
   }
   if(!st.length&&!ent.length&&!rr.length)throw new Error('не удалось распознать: нужен итоговый или стартовый протокол либо техническая заявка');
   if(rr.length){
@@ -861,7 +867,7 @@ function parseWorkbook(wb,fname,opts){
     const g=y=>{const m=ym.get(y);return m?[...m].sort((p,q)=>q[1]-p[1])[0][0]:null};
     if(!(meta&&meta.blocks))[...st,...ent].forEach(x=>{if(x.gd&&!gm.has(x.key+'|'+dkey(x.dist))){const v=g(x.yob);if(v)x.grp=v}});
   }
-  return {rows:rr,notes,meta,st,ent};
+  return {rows:rr,notes,meta,st,ent,relay:rl};
 }
 async function loadFiles(files){
   const errs=[];let res='',go='';
@@ -877,7 +883,7 @@ async function loadFiles(files){
         const p=parseWorkbook(wb,f.name);
         if(p.st.length){sfiles[f.name]=p.st;go='sta'}
         if(p.ent.length){efiles[f.name]=p.ent;go='ent'}
-        if(p.rows.length){addComp(f.name,p.rows,p.notes,p.meta);res=f.name}
+        if(p.rows.length){addComp(f.name,p.rows,p.notes,p.meta,p.relay);res=f.name}
       }
     }catch(x){errs.push(f.name+' — '+x.message)}
   }
@@ -895,7 +901,7 @@ function fill(id,label,vals){$(id).innerHTML='<option value="">'+label+'</option
 function init(){
   fixCoaches();
   drop.classList.add('hide');$('app').classList.remove('hide');
-  fill('fd','Все дни',uniq('date'));fill('fs','Все дистанции',uniq('dist'));fill('fg','Все пол',uniq('sex'));fill('fp','Все группы',uniq('grp'));fill('ft','Все клубы',uniq('team'));
+  fill('fd','Все дни',uniq('date'));fill('fs','Все дистанции',[...uniq('dist'),...new Set(relays.map(r=>r.dist))]);fill('fg','Все пол',uniq('sex'));fill('fp','Все группы',uniq('grp'));fill('ft','Все клубы',uniq('team'));
   fill('wd','Все дни',uniq('date'));fill('ws','Все дистанции',uniq('dist'));fill('wg','Все группы',uniq('grp'));
   $('fg').firstChild.textContent='Оба пола';
   const sx={};rows.forEach(r=>{if(r.sex)sx[nk(r.fio)]=r.sex});
@@ -1031,8 +1037,12 @@ function render(){
     const c=r.pl?(r.pl<4?' p'+r.pl:''):' st';
     h+=`<tr class="${c.trim()}"><td class="pl">${r.pl??''}</td><td><a class="nm" data-n="${esc(r.fio)}">${esc(r.fio)}</a></td><td>${esc(r.yob)}</td><td>${esc(r.club||'')}</td><td>${esc(r.city||'')}</td><td class="t">${r.st?esc(r.st):esc(fmtT(r.res))}${legsHtml(r)}</td><td>${rcell(r)}</td><td>${esc(r.coach||'')}</td></tr>`;
   }
+  const ro=relays.filter(r=>(!f.date||r.date===f.date)&&(!f.dist||r.dist===f.dist)&&!f.sex&&(!f.grp||r.grp===f.grp)&&(!f.team||r.team===f.team||r.club===f.team)&&!u&&(!m||(r.pl>=1&&r.pl<=3))&&(!q||[r.fio,r.club,r.city].join(' ').toLowerCase().includes(q)));
+  {let lk='';for(const r of ro){const k=r.date+r.dist+r.grp;if(k!==lk){lk=k;h+=`<tr class="ev"><td colspan="8">${esc(r.dist)}<span>${esc(r.sex)}${r.grp?', '+esc(r.grp):''}${r.date?' · '+esc(r.date):''}</span></td></tr>`}
+    const c=r.pl?(r.pl<4?' p'+r.pl:''):' st';
+    h+=`<tr class="${c.trim()}"><td class="pl">${r.pl??''}</td><td style="text-align:left">${esc(r.fio)}</td><td></td><td>${esc(r.club||'')}</td><td>${esc(r.city||'')}</td><td class="t">${r.st?esc(r.st):esc(r.sec!=null?fS(r.sec):r.res)}</td><td></td><td></td></tr>`}}
   $('tb').innerHTML=h||'<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mute)">Ничего не найдено. Измените фильтры.</td></tr>';fixRows($('tb'));
-  $('cnt').textContent='Показано записей: '+out.length+' · повысили разряд: '+out.filter(isUp).length;
+  $('cnt').textContent='Показано записей: '+(out.length+ro.length)+' · повысили разряд: '+out.filter(isUp).length;
 }
 function openLeg(gi,n){      // окно: группа ранжирована только по одному заплыву комплекса
   const g=grpList[gi];if(!g)return;
@@ -1135,7 +1145,7 @@ async function parseFile(f,opts){
     p.st.forEach(x=>{if(S25.test(x.dist)&&x.seed!=null&&x.seed===base.get(x.key)){x.seed=null;x.seedOff=true}});
     p.ent=p.ent.filter(x=>!(S25.test(x.dist)&&x.t!=null&&x.t===base.get(x.key)))}
   if(opts&&opts.seedDist){const sd=nDist(opts.seedDist);p.st.forEach(x=>{if(x.dist!==sd){x.seed=null;x.seedOff=true}})}      // заявочное время сохраняем только для указанной дистанции
-  return {name:f.name,res:p.rows.length?{rows:p.rows,notes:p.notes,meta:p.meta}:undefined,st:p.st,ent:p.ent};
+  return {name:f.name,res:p.rows.length?{rows:p.rows,notes:p.notes,meta:p.meta,relay:p.relay}:undefined,st:p.st,ent:p.ent};
 }
 async function getParsed(name,user,opts){
   if(user)return userParsed[name];
@@ -1206,11 +1216,11 @@ async function openCompetition(id,push=true){
   const c=allCat().find(x=>x.id===id);if(!c||opening||!(c.files.length||(c.docs&&c.docs.length)))return;
   opening=true;$('ld').classList.add('on');$('sub').textContent='Загрузка материалов…';$('err').textContent='';
   try{
-    rows=[];ents=[];starts=[];efiles={};sfiles={};comps=[];resNotes=[];picked=false;curFile='';homeLoaded=false;
+    rows=[];relays=[];ents=[];starts=[];efiles={};sfiles={};comps=[];resNotes=[];picked=false;curFile='';homeLoaded=false;
     const errs=[],mine=[];
     for(const f of c.files){
       try{const p=await getParsed(f.name,c.user,(f.entryDist||f.seedDist)?{entryDist:f.entryDist,seedDist:f.seedDist}:undefined);if(!p)continue;
-        if(p.res){addComp(p.name,p.res.rows,p.res.notes,p.res.meta);mine.push(p.name)}
+        if(p.res){addComp(p.name,p.res.rows,p.res.notes,p.res.meta,p.res.relay);mine.push(p.name)}
         if(p.st&&p.st.length)sfiles[p.name]=p.st;
         if(p.ent&&p.ent.length)efiles[p.name]=p.ent;
       }catch(x){errs.push(f.name+' — '+x.message)}
@@ -1218,7 +1228,7 @@ async function openCompetition(id,push=true){
     for(const o of allCat()){
       if(o.id===id)continue;
       for(const f of o.files){if(!o.user&&!(f.kinds||[f.kind]).includes('itog'))continue;
-        try{const p=await getParsed(f.name,o.user,(f.entryDist||f.seedDist)?{entryDist:f.entryDist,seedDist:f.seedDist}:undefined);if(p&&p.res)addComp(p.name,p.res.rows,p.res.notes,p.res.meta)}catch(x){}}
+        try{const p=await getParsed(f.name,o.user,(f.entryDist||f.seedDist)?{entryDist:f.entryDist,seedDist:f.seedDist}:undefined);if(p&&p.res)addComp(p.name,p.res.rows,p.res.notes,p.res.meta,p.res.relay)}catch(x){}}
     }
     for(const k of comps){const o=allCat().find(z=>z.files.some(f=>f.name===k.file));if(o&&!o.user){k.label=[o.short||o.title,o.date].filter(Boolean).join(', ');const t=/^\d{4}-\d{2}-\d{2}/.test(o.start||'')?Date.parse(o.start.slice(0,10)):NaN;if(!isNaN(t))k.ts=t}}      // дата из каталога — основа хронологического порядка
     ents=Object.values(efiles).flat();starts=Object.values(sfiles).flat();
@@ -1256,7 +1266,7 @@ async function loadAllResults(){
     comps=[];
     for(const o of allCat()){
       for(const f of o.files){if(!o.user&&!(f.kinds||[f.kind]).includes('itog'))continue;
-        try{const p=await getParsed(f.name,o.user,(f.entryDist||f.seedDist)?{entryDist:f.entryDist,seedDist:f.seedDist}:undefined);if(p&&p.res)addComp(p.name,p.res.rows,p.res.notes,p.res.meta)}catch(x){}}
+        try{const p=await getParsed(f.name,o.user,(f.entryDist||f.seedDist)?{entryDist:f.entryDist,seedDist:f.seedDist}:undefined);if(p&&p.res)addComp(p.name,p.res.rows,p.res.notes,p.res.meta,p.res.relay)}catch(x){}}
     }
     for(const k of comps){const o=allCat().find(z=>z.files.some(f=>f.name===k.file));if(o&&!o.user){k.label=[o.short||o.title,o.date].filter(Boolean).join(', ');const t=/^\d{4}-\d{2}-\d{2}/.test(o.start||'')?Date.parse(o.start.slice(0,10)):NaN;if(!isNaN(t))k.ts=t}}
     comps.sort((a,b)=>a.ts-b.ts);
