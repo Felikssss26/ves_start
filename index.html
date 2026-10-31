@@ -175,6 +175,10 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 #cp{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;box-sizing:border-box;margin:24px 0 0;padding:16px;text-align:center;color:var(--mute);font-size:13px;background:var(--card);border-top:1px solid var(--line)}#cp img{border-radius:50%;display:block}#home,#app{min-height:calc(100vh - 230px)}
 .hnav{display:flex;gap:6px;flex-wrap:wrap}.hnav .btn{padding:7px 10px;display:inline-flex;align-items:center;justify-content:center;line-height:0}.hnav .spin svg{animation:rot 1s linear infinite}@keyframes rot{to{transform:rotate(360deg)}}
 #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);background:var(--ink);color:var(--card);padding:10px 16px;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:80;max-width:90vw;text-align:center}#toast.on{opacity:1;transform:translate(-50%,0)}
+.swt{font:700 clamp(40px,12vw,64px)/1.1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center;font-variant-numeric:tabular-nums;padding:14px 0;letter-spacing:1px}
+.swb{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:6px 0 12px}.swb .btn{min-width:92px;padding:12px 16px;font-size:16px}
+.swf{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:0 0 10px}.swf label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute)}.swf input,.swf select{padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:15px}
+.swl{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:0 0 8px;font-size:13px;color:var(--mute)}.swl span{background:var(--accbg);padding:3px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
 .ccard.upc.hasdocs{cursor:pointer}.ccard.upc.hasdocs:hover,.ccard.upc.hasdocs:focus-visible{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.18)}
 .pol{margin:0 0 16px;text-align:center}.pol figcaption{font-weight:600;margin:0 0 6px;color:var(--mute)}.pol img{max-width:min(100%,900px);height:auto;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.12)}
 .cmpt td.nx,.cmpt td.nx *{white-space:nowrap}.cmpt td.nx{min-width:250px}
@@ -224,6 +228,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
     <div class="menu hide" id="menu" role="menu">
       <button id="pick" role="menuitem">Открыть файлы…</button>
       <button id="inst" class="hide" role="menuitem">Установить приложение</button>
+      <button id="swm" role="menuitem">Самостоятельный замер</button>
       <button id="theme" role="menuitem">Тёмная тема</button>
       <button id="vw" class="hide" role="menuitem" title="Переключить вид: как на компьютере / для телефона">Вид</button>
       <button id="clr" class="hide" role="menuitem" title="Удалить загруженные данные с этого устройства">Удалить загруженные файлы</button>
@@ -304,6 +309,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
 <div id="ld" aria-live="polite" role="status"><div class="wv"></div><div class="wv w2"></div><div>Загрузка…</div></div>
 <button id="up" aria-label="Наверх" title="Наверх">↑</button>
 <dialog id="hdlg"><header><h2 id="hdn">Спортсмен</h2><button class="btn ghost" id="hdx" style="color:var(--ink)">Закрыть</button></header><div style="padding:12px"><div id="hprof"></div><div id="hcc" class="hide"></div><div id="hbox"></div></div></dialog>
+<dialog id="swdlg"><header><h2 id="swn">Самостоятельный замер</h2><button class="btn ghost" id="swx" style="color:var(--ink)">Закрыть</button></header><div id="swb" style="padding:12px"></div></dialog>
 <dialog id="dlg"><header><h2 id="dn"></h2><button class="btn ghost" id="dx" style="color:var(--ink)">Закрыть</button></header><div id="db" style="padding:12px"></div></dialog>
 <script>
 const $=id=>document.getElementById(id);
@@ -1091,7 +1097,7 @@ function openAth(n){
     const res=lg!=null?esc(fS(lg)):o.r?((o.r.pl?'<span style="font-weight:700">'+o.r.pl+' место</span><br>':'')+esc(o.r.st?o.r.st:fmtT(o.r.res))):'—';      // место и время — в две строки
     return `<tr><td>${esc(o.day||fb)}</td><td>${esc(o.dist)}${(o.r||o.e)?', '+esc((o.r||o.e).grp||''):''}</td><td class="t">${o.e||o.s?(es!=null?esc(fS(es))+(o.e&&o.e.oc&&o.e.t===es?' (вк)':''):(o.s&&o.s.seedOff&&!o.e?'—':'без времени')):'—'}</td><td>${o.s?(o.s.heat!=null?'Заплыв '+fh(o.s.heat)+(o.s.lane?', дор. '+o.s.lane:''):'не сформирован'):'—'}</td><td class="t">${res}</td><td class="t">${df}</td><td class="t">${pv?esc(fS(pv.t))+'<div class="legs" style="min-width:0">'+esc(pv.lab)+'</div>':'—'}</td><td class="t">${dp}</td><td>${o.r?rcell(o.r):''}</td></tr>`}).join('');
   $('dn').textContent=n;
-  $('db').innerHTML=`<p style="margin:0 0 10px;color:var(--mute)">${esc(f.yob||'')} г.р. · ${esc(f.team)}${f.city?', '+esc(f.city):''}<br>Тренер: ${esc(coach)}${a.length?`<br>Медали: золото ${md[0]}, серебро ${md[1]}, бронза ${md[2]}`:''}</p><div class="wrap"><table style="min-width:900px"><thead><tr><th>День<th>Дистанция<th>Заявка<th>Заплыв<th>Итог<th>Итог к заявке<th>Прошлый результат<th>Итог к прошлому<th>Разряд</thead><tbody>${tr}</tbody></table></div>${comps.length>1?`<p style="margin:10px 0 0"><button class="btn" data-cmp="${esc(n)}">Динамика по соревнованиям</button></p>`:''}`;
+  $('db').innerHTML=`<p style="margin:0 0 10px;color:var(--mute)">${esc(f.yob||'')} г.р. · ${esc(f.team)}${f.city?', '+esc(f.city):''}<br>Тренер: ${esc(coach)}${a.length?`<br>Медали: золото ${md[0]}, серебро ${md[1]}, бронза ${md[2]}`:''}</p><div class="wrap"><table style="min-width:900px"><thead><tr><th>День<th>Дистанция<th>Заявка<th>Заплыв<th>Итог<th>Итог к заявке<th>Прошлый результат<th>Итог к прошлому<th>Разряд</thead><tbody>${tr}</tbody></table></div>${comps.length>1?`<p style="margin:10px 0 0"><button class="btn" data-cmp="${esc(n)}">Динамика по соревнованиям</button></p>`:''}<p style="margin:10px 0 0"><button class="btn ghost" style="color:var(--ink)" data-sw="${esc(n)}">⏱ Самостоятельный замер</button></p>`;
   if(!$('dlg').open)$('dlg').showModal();
 }
 document.addEventListener('click',e=>{const d=e.target.dataset||{};if(d.lgi!==undefined){openLeg(+d.lgi,d.lgs);return}if(d.n)openAth(d.n);if(d.cmp){if($('dlg').open)$('dlg').close();$('cm').value='a';$('ca').value=d.cmp;showTab('cmp');renderCmp()}});
@@ -1104,6 +1110,80 @@ $('who').addEventListener('change',()=>{
 });
 $('dx').onclick=()=>$('dlg').close();
 $('dlg').addEventListener('click',e=>{if(e.target===$('dlg'))$('dlg').close()});
+
+// ---- самостоятельный замер: секундомер и таблица. Данные хранятся только на этом устройстве, отдельно от протоколов, и нигде больше не используются
+(function(){
+  const KEY='ves-selftime-v1',fT=v=>fS(v),pad=n=>String(n).padStart(2,'0');
+  const load=()=>{try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return []}};
+  const save=a=>{try{localStorage.setItem(KEY,JSON.stringify(a));return true}catch(e){return false}};
+  let who='',t0=0,acc=0,run=false,laps=[],raf=0,view='watch',sel=null,wl=null;
+  const now=()=>performance.now(),el=()=>acc+(run?now()-t0:0),sec=()=>Math.round(el()/10)/100;
+  const stamp=ts=>{const d=new Date(ts);return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes())};
+  const diff=(a,b)=>{if(a==null||b==null)return '';const d=a-b;return (d>0?'+':d<0?'−':'')+Math.abs(d).toFixed(2).replace('.',',')+' с'};
+  const events=()=>{const k=nk(who),out=[];starts.filter(x=>x.key===k).sort((a,b)=>a.day-b.day||(a.heat||0)-(b.heat||0)).forEach(x=>out.push({dist:x.dist,heat:x.heat,lane:x.lane,seed:x.seed,day:x.day}));
+    ents.filter(x=>x.key===k).forEach(x=>{if(!out.some(o=>dkey(o.dist)===dkey(x.dist)))out.push({dist:x.dist,heat:null,lane:null,seed:x.t,day:x.day})});return out};
+  const compTitle=()=>{try{const c=allCat().find(x=>x.id===openId);return c?c.title:''}catch(e){return ''}};
+  const tick=()=>{const e=$('swd');if(e)e.textContent=fT(el()/1000).replace(/^(\d+):/,(m,a)=>pad(a)+':');if(run)raf=requestAnimationFrame(tick)};
+  const wake=async()=>{try{if(navigator.wakeLock)wl=await navigator.wakeLock.request('screen')}catch(e){}};
+  const unwake=()=>{try{wl&&wl.release();wl=null}catch(e){}};
+  function drawWatch(){
+    const ev=events(),opts=ev.map((o,i)=>`<option value="${i}">${esc(o.dist)}${o.heat!=null?' · заплыв '+(Math.floor(o.heat)+(o.heat%1?'абвгде'[Math.round(o.heat%1*100)-1]||'':''))+(o.lane!=null?', дор. '+o.lane:''):''}</option>`).join('');
+    $('swn').textContent='Самостоятельный замер';
+    $('swb').innerHTML=`<div style="display:flex;gap:6px;margin:0 0 10px"><button class="btn" id="swv1">Секундомер</button><button class="btn ghost" id="swv2" style="color:var(--ink)">Таблица замеров (${load().length})</button></div>
+    <div class="swf"><label>Спортсмен<input id="swwho" value="${esc(who)}" placeholder="Фамилия Имя"></label>
+    <label>Дистанция<select id="swev">${opts}<option value="-1">Другая…</option></select></label>
+    <label id="swdl" class="${ev.length?'hide':''}">Своя дистанция<input id="swdist" placeholder="например, 50 м брасс"></label>
+    <label>Заплыв<input id="swheat" type="number" min="1" inputmode="numeric"></label><label>Дорожка<input id="swlane" type="number" min="1" inputmode="numeric"></label></div>
+    <div class="swt" id="swd">00:00,00</div><div class="swl" id="swlaps"></div>
+    <div class="swb"><button class="btn" id="swgo">Старт</button><button class="btn ghost" id="swlap" style="color:var(--ink)">Круг</button><button class="btn ghost" id="swrs" style="color:var(--ink)">Сброс</button></div>
+    <div class="swb"><button class="btn" id="swsv">Записать результат</button></div><p id="swmsg" style="text-align:center;color:var(--mute);margin:0;min-height:1.3em"></p>
+    <p style="font-size:12px;color:var(--mute);margin:10px 0 0">Замер вручную неточен (реакция на кнопку — до 0,3 с). Записи хранятся только на этом устройстве и не попадают в протоколы, медали и сравнение.</p>`;
+    const sync=()=>{const i=+$('swev').value,o=ev[i];$('swdl').classList.toggle('hide',!!o);if(o){$('swheat').value=o.heat!=null?Math.floor(o.heat):'';$('swlane').value=o.lane??''}};
+    if(ev.length)$('swev').value='0';sync();$('swev').onchange=sync;$('swwho').oninput=()=>{who=$('swwho').value};
+    $('swv2').onclick=()=>{view='tbl';draw()};
+    const upd=()=>{$('swgo').textContent=run?'Стоп':(acc?'Продолжить':'Старт');$('swlaps').innerHTML=laps.map((v,i)=>`<span>${i+1}: ${fT(v)}</span>`).join('');tick()};
+    $('swgo').onclick=()=>{if(run){acc+=now()-t0;run=false;cancelAnimationFrame(raf);unwake()}else{t0=now();run=true;wake()}upd();tick()};
+    $('swlap').onclick=()=>{if(run||acc){laps.push(sec());upd()}};
+    $('swrs').onclick=()=>{run=false;acc=0;laps=[];cancelAnimationFrame(raf);unwake();$('swmsg').textContent='';upd()};
+    $('swsv').onclick=()=>{
+      if(run){acc+=now()-t0;run=false;cancelAnimationFrame(raf);unwake()}
+      const t=sec();if(!t){$('swmsg').textContent='Сначала измерьте время.';return}
+      const o=ev[+$('swev').value],nm=($('swwho').value||'').trim();if(!nm){$('swmsg').textContent='Укажите спортсмена.';return}
+      const a=load();a.push({id:Date.now()+''+Math.floor(Math.random()*1e3),ts:Date.now(),fio:nm,comp:compTitle(),dist:o?o.dist:($('swdist').value||'').trim()||'—',heat:+$('swheat').value||null,lane:+$('swlane').value||null,t,laps:laps.slice(),seed:o&&o.seed!=null?o.seed:null,note:''});
+      if(!save(a)){$('swmsg').textContent='Не удалось сохранить: память браузера недоступна.';return}
+      run=false;acc=0;laps=[];upd();$('swv2').textContent='Таблица замеров ('+a.length+')';$('swmsg').textContent='Записано: '+fT(t);
+    };
+    upd();if(run)tick();
+  }
+  function drawTable(){
+    const a=load().sort((x,y)=>y.ts-x.ts);
+    $('swn').textContent='Самостоятельный замер';
+    const tr=a.map(r=>`<tr><td>${esc(stamp(r.ts))}</td><td style="text-align:left">${esc(r.fio)}</td><td>${esc(r.dist)}</td><td>${r.heat??''}</td><td>${r.lane??''}</td><td class="t">${esc(fT(r.t))}</td><td>${esc(r.laps&&r.laps.length?r.laps.map(fT).join(' · '):'')}</td><td>${r.seed!=null?esc(fT(r.seed)):''}</td><td>${diff(r.t,r.seed)}</td><td><button class="btn ghost" style="color:var(--ink);padding:4px 8px" data-swdel="${esc(r.id)}" aria-label="Удалить запись">✕</button></td></tr>`).join('');
+    $('swb').innerHTML=`<div style="display:flex;gap:6px;margin:0 0 10px;flex-wrap:wrap"><button class="btn ghost" id="swv1" style="color:var(--ink)">Секундомер</button><button class="btn" id="swv2">Таблица замеров (${a.length})</button></div>
+    <div class="wrap"><table style="min-width:820px"><thead><tr><th>Дата и время<th>Спортсмен<th>Дистанция<th>Заплыв<th>Дор.<th>Замер<th>Отрезки<th>Заявка<th>Разница<th></thead><tbody>${tr||'<tr><td colspan="10" style="padding:20px;color:var(--mute)">Замеров пока нет.</td></tr>'}</tbody></table></div>
+    <div class="swb" style="margin-top:12px"><button class="btn" id="swxl"${a.length?'':' disabled'}>Выгрузить в Excel</button><button class="btn ghost" id="swclr" style="color:var(--bad)"${a.length?'':' disabled'}>Удалить все замеры из памяти</button></div><p id="swmsg" style="text-align:center;color:var(--mute);margin:0"></p>`;
+    $('swv1').onclick=()=>{view='watch';draw()};
+    $('swxl').onclick=()=>{
+      try{
+        const H=['Дата и время','Спортсмен','Соревнование','Дистанция','Заплыв','Дорожка','Замер','Замер, с','Отрезки','Заявка','Заявка, с','Разница, с'];
+        const R=a.slice().sort((x,y)=>x.ts-y.ts).map(r=>[stamp(r.ts),r.fio,r.comp,r.dist,r.heat,r.lane,fT(r.t),r.t,(r.laps||[]).map(fT).join(' · '),r.seed!=null?fT(r.seed):'',r.seed!=null?r.seed:'',r.seed!=null?Math.round((r.t-r.seed)*100)/100:'']);
+        const ws=XLSX.utils.aoa_to_sheet([H,...R]);ws['!cols']=[16,24,30,26,8,8,10,10,28,10,10,12].map(w=>({wch:w}));
+        const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Самостоятельный замер');
+        const d=new Date();XLSX.writeFile(wb,'zameri_'+d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'.xlsx');
+      }catch(e){$('swmsg').textContent='Не удалось создать файл Excel: '+e.message}
+    };
+    $('swclr').onclick=()=>{if(confirm('Удалить из памяти этого устройства все самостоятельные замеры ('+a.length+')? Это нельзя отменить.')){try{localStorage.removeItem(KEY)}catch(e){}draw()}};
+  }
+  const draw=()=>view==='tbl'?drawTable():drawWatch();
+  function open(name,v){who=name||who;view=v||'watch';draw();if(!$('swdlg').open)$('swdlg').showModal()}
+  document.addEventListener('click',e=>{const d=e.target.dataset||{};
+    if(d.sw!==undefined){open(d.sw,'watch');return}
+    if(d.swdel){const a=load().filter(r=>r.id!==d.swdel);save(a);drawTable()}
+  });
+  $('swm').onclick=()=>{$('menu').classList.add('hide');$('kebab').setAttribute('aria-expanded','false');open('', 'tbl')};
+  $('swx').onclick=()=>{$('swdlg').close()};
+  $('swdlg').addEventListener('click',e=>{if(e.target===$('swdlg'))$('swdlg').close()});
+})();
 
 // ---- PWA: каталог соревнований (data/index.json), открытие карточек, свои файлы, установка, офлайн
 const KINDS={itog:'Итоговый протокол',start:'Стартовый протокол',zayavka:'Заявка'};
