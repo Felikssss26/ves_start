@@ -1181,8 +1181,8 @@ function renderHome(){
       const dc=c.docs&&c.docs.length,op=dc||kinds.length,tg=op?'button':'div';
       return `<${tg} class="ccard upc${op?' hasdocs':''}"${op?' data-open="'+esc(c.id)+'"':''}${artStyle(c)}><span class="cdate">${esc(c.date||'')}<b class="badge">Предстоящее</b></span><span class="ctitle">${esc(c.title)}</span><span class="cplace">${ICO}${placeHtml(c)}</span>${venueHtml(c)}${(kinds.length||dc)?'<span class="cchips">'+kinds.map(k=>`<i>${esc(KINDS[k])}</i>`).join('')+(dc?'<i>Положение</i>':'')+'</span>':''}<span class="cnote">${kinds.length?'Итоги появятся после соревнования.':'Материалы появятся после соревнования.'}${left}</span></${tg}>`;
     }
-    const pre=secOf(c)===1&&!kinds.includes('itog');      // есть стартовый протокол или заявка, итогов ещё нет
-    return `<button class="ccard${pre?' pre':''}" data-open="${esc(c.id)}"${artStyle(c)}><span class="cdate">${esc(c.date||'')}${pre?'<b class="badge">Итогов пока нет</b>':''}</span><span class="ctitle">${esc(c.title)}</span>`+
+    const pre=secOf(c)===1,nr0=!kinds.includes('itog');      // текущие подсвечиваются всегда      // есть стартовый протокол или заявка, итогов ещё нет
+    return `<button class="ccard${pre?' pre':''}" data-open="${esc(c.id)}"${artStyle(c)}><span class="cdate">${esc(c.date||'')}${pre?'<b class="badge">'+(nr0?'Итогов пока нет':'Идёт сейчас')+'</b>':''}</span><span class="ctitle">${esc(c.title)}</span>`+
       `<span class="cplace">${ICO}${placeHtml(c)}</span>${venueHtml(c)}<span class="cchips">${kinds.map(k=>`<i>${esc(KINDS[k])}</i>`).join('')}${c.docs&&c.docs.length?'<i>Положение</i>':''}</span>${c.note?`<span class="cnote">${esc(c.note)}</span>`:''}</button>`};
   $('cgrid').innerHTML=SEC.map((t,i)=>{const L=list.filter(c=>secOf(c)===i);return L.length?`<h3 class="csec">${t}</h3>`+L.map(html).join(''):''}).join('')+
     '<button class="ccard up" data-upload="1" style="margin-top:10px">+ Открыть свои файлы Excel</button>';
