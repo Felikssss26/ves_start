@@ -178,6 +178,7 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 .swt{font:700 clamp(40px,12vw,64px)/1.1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center;font-variant-numeric:tabular-nums;padding:14px 0;letter-spacing:1px}
 .swb{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:6px 0 12px}.swb .btn{min-width:92px;padding:12px 16px;font-size:16px}
 .swf{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:0 0 10px}.swf label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute)}.swf input,.swf select{padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:15px}
+.swb #swgo,.swb #swlap{min-width:min(44vw,184px);padding:26px 20px;font-size:26px;border-radius:14px}
 .swl{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:0 0 8px;font-size:13px;color:var(--mute)}.swl span{background:var(--accbg);padding:3px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
 .ccard.upc.hasdocs{cursor:pointer}.ccard.upc.hasdocs:hover,.ccard.upc.hasdocs:focus-visible{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.18)}
 .pol{margin:0 0 16px;text-align:center}.pol figcaption{font-weight:600;margin:0 0 6px;color:var(--mute)}.pol img{max-width:min(100%,900px);height:auto;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.12)}
@@ -257,7 +258,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
     <section id="v-res">
       <div class="filters">
         <input type="search" id="q" placeholder="Поиск: фамилия, клуб, тренер">
-        <select id="fd"></select><select id="fs"></select><select id="fg"></select><select id="fp"></select><select id="ft"></select>
+        <select id="fd"></select><select id="fs"></select><select id="fg"></select><select id="fp"></select><select id="ft"></select><select id="fc"></select>
         <label class="chk"><input type="checkbox" id="fm"> Только призёры</label>
         <label class="chk"><input type="checkbox" id="fu"> Повысили разряд</label>
         <button class="btn ghost" id="rst" style="color:var(--ink)">Сбросить</button>
@@ -270,7 +271,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
     <section id="v-ent" class="hide">
       <div class="filters">
         <input type="search" id="eq" placeholder="Поиск: фамилия, тренер">
-        <select id="ed"></select><select id="es"></select><select id="eg"></select><select id="ep"></select><select id="et"></select>
+        <select id="ed"></select><select id="es"></select><select id="eg"></select><select id="ep"></select><select id="et"></select><select id="ec"></select>
         <select id="eh"><option value="0">Без деления на заплывы</option><option value="4">Заплывы по 4</option><option value="6">Заплывы по 6</option><option value="8">Заплывы по 8</option><option value="10">Заплывы по 10</option></select>
       </div>
       <div class="count" id="ecnt"></div>
@@ -280,7 +281,7 @@ body>header::after{content:'';flex:0 0 100%;height:10px;margin:6px -16px -14px;w
       <div class="filters">
         <input type="search" id="sq" placeholder="Поиск: фамилия, тренер">
         <input type="number" id="sh" min="1" placeholder="№ заплыва">
-        <select id="sd"></select><select id="ss"></select><select id="sg"></select><select id="sp"></select><select id="st"></select>
+        <select id="sd"></select><select id="ss"></select><select id="sg"></select><select id="sp"></select><select id="st"></select><select id="sc"></select>
         <button class="btn ghost" id="srst" style="color:var(--ink)">Сбросить</button>
       </div>
       <div class="count" id="scnt"></div>
@@ -903,11 +904,12 @@ async function loadFiles(files){
   }
 }
 const uniq=k=>[...new Set(rows.map(r=>r[k]).filter(Boolean))];
+const coachL=v=>String(v||'').split(/\s*[,;]+\s*/).map(x=>x.replace(/\s+/g,' ').trim()).filter(x=>x.length>2),cm=(v,sel)=>coachL(v).includes(sel),coachOpts=a=>[...new Set(a.flatMap(x=>coachL(x.coach)))].sort((x,y)=>x.localeCompare(y,'ru'));      // тренеры по одному (в ячейке их может быть несколько)
 function fill(id,label,vals){$(id).innerHTML='<option value="">'+label+'</option>'+vals.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')}
 function init(){
   fixCoaches();
   drop.classList.add('hide');$('app').classList.remove('hide');
-  fill('fd','Все дни',uniq('date'));fill('fs','Все дистанции',[...uniq('dist'),...new Set(relays.map(r=>r.dist))]);fill('fg','Все пол',uniq('sex'));fill('fp','Все группы',uniq('grp'));fill('ft','Все клубы',uniq('team'));
+  fill('fd','Все дни',uniq('date'));fill('fs','Все дистанции',[...uniq('dist'),...new Set(relays.map(r=>r.dist))]);fill('fg','Все пол',uniq('sex'));fill('fp','Все группы',uniq('grp'));fill('ft','Все клубы',uniq('team'));fill('fc','Все тренеры',coachOpts(rows));
   fill('wd','Все дни',uniq('date'));fill('ws','Все дистанции',uniq('dist'));fill('wg','Все группы',uniq('grp'));
   $('fg').firstChild.textContent='Оба пола';
   const sx={};rows.forEach(r=>{if(r.sex)sx[nk(r.fio)]=r.sex});
@@ -917,29 +919,29 @@ function init(){
   $('wl').innerHTML=names.map(n=>'<option value="'+esc(n)+'">').join('');
   const ue=k=>[...new Set(ents.map(e=>e[k]).filter(Boolean))];
   fill('ed','Все дни',ue('day').sort().map(d=>d+' день'));fill('es','Все дистанции',[...new Set(ents.slice().sort((x,y)=>x.day-y.day||x.ord-y.ord).map(e=>e.dist))]);
-  fill('eg','Оба пола',ue('sex'));fill('ep','Все группы',ue('grp').sort());fill('et','Все клубы',ue('team'));
+  fill('eg','Оба пола',ue('sex'));fill('ep','Все группы',ue('grp').sort());fill('et','Все клубы',ue('team'));fill('ec','Все тренеры',coachOpts(ents));
   const us=k=>[...new Set(starts.map(e=>e[k]).filter(Boolean))];
   fill('sd','Все дни',us('day').sort().map(d=>d+' день'));fill('ss','Все дистанции',[...new Set(starts.slice().sort((x,y)=>x.day-y.day||x.ev-y.ev).map(e=>e.dist))]);
-  fill('sg','Оба пола',us('sex'));fill('sp','Все группы',us('grp').sort());fill('st','Все клубы',us('team'));
+  fill('sg','Оба пола',us('sex'));fill('sp','Все группы',us('grp').sort());fill('st','Все клубы',us('team'));fill('sc','Все тренеры',coachOpts(starts));
   render();cards();medals();renderEnt();renderSta();initCmp();renderCmp();
 }
-['q','fd','fs','fg','fp','ft','fm','fu'].forEach(id=>$(id).addEventListener('input',render));
+['q','fd','fs','fg','fp','ft','fc','fm','fu'].forEach(id=>$(id).addEventListener('input',render));
 ['wd','ws','wg'].forEach(id=>$(id).addEventListener('input',cards));
 (function(){const b=$('up');const y=()=>Math.max(window.scrollY||document.documentElement.scrollTop||0,...[...document.querySelectorAll('.wrap')].filter(w=>w.offsetParent&&!w.closest('dialog')).map(w=>w.scrollTop));const t=()=>b.classList.toggle('show',y()>300);document.addEventListener('scroll',t,{capture:true,passive:true});window.addEventListener('resize',t);b.onclick=()=>{window.scrollTo({top:0,behavior:'smooth'});document.querySelectorAll('.wrap').forEach(w=>w.scrollTo({top:0,behavior:'smooth'}))};t()})();      // кнопка «Наверх»: реагирует и на прокрутку страницы, и на прокрутку внутри таблицы
-$('rst').onclick=()=>{['q','fd','fs','fg','fp','ft'].forEach(i=>$(i).value='');$('fm').checked=false;$('fu').checked=false;render()};
+$('rst').onclick=()=>{['q','fd','fs','fg','fp','ft','fc'].forEach(i=>$(i).value='');$('fm').checked=false;$('fu').checked=false;render()};
 function showTab(t){
   document.querySelectorAll('#tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));
   ['res','win','med','ent','sta','cmp','nrm','pol'].forEach(x=>$('v-'+x).classList.toggle('hide',x!==t));
 }
 $('tabs').onclick=e=>{if(e.target.dataset.t)showTab(e.target.dataset.t)};
-['eq','ed','es','eg','ep','et','eh'].forEach(id=>$(id).addEventListener('input',renderEnt));
-['sq','sh','sd','ss','sg','sp','st'].forEach(id=>$(id).addEventListener('input',renderSta));
-$('srst').onclick=()=>{['sq','sh','sd','ss','sg','sp','st'].forEach(i=>$(i).value='');renderSta()};
+['eq','ed','es','eg','ep','et','ec','eh'].forEach(id=>$(id).addEventListener('input',renderEnt));
+['sq','sh','sd','ss','sg','sp','st','sc'].forEach(id=>$(id).addEventListener('input',renderSta));
+$('srst').onclick=()=>{['sq','sh','sd','ss','sg','sp','st','sc'].forEach(i=>$(i).value='');renderSta()};
 function renderSta(){
   const tb=$('stb');
   if(!starts.length){tb.innerHTML='<tr><td colspan="8" style="padding:24px;text-align:center;color:var(--mute)">Стартовый протокол не загружен. Добавьте файл стартового протокола (.xlsx).</td></tr>';$('scnt').textContent='';return}
-  const q=nk($('sq').value),hn=parseInt($('sh').value)||0,d=parseInt($('sd').value)||0,s=$('ss').value,g=$('sg').value,gp=$('sp').value,t=$('st').value;
-  const L=starts.filter(x=>(!d||x.day===d)&&(!s||x.dist===s)&&(!g||x.sex===g)&&(!gp||x.grp===gp)&&(!t||x.team===t)&&(!hn||Math.floor(x.heat)===hn)&&(!q||nk(x.fio+' '+x.coach).includes(q)));
+  const q=nk($('sq').value),hn=parseInt($('sh').value)||0,d=parseInt($('sd').value)||0,s=$('ss').value,g=$('sg').value,gp=$('sp').value,t=$('st').value,tc=$('sc').value;
+  const L=starts.filter(x=>(!d||x.day===d)&&(!s||x.dist===s)&&(!g||x.sex===g)&&(!gp||x.grp===gp)&&(!t||x.team===t)&&(!tc||cm(x.coach,tc))&&(!hn||Math.floor(x.heat)===hn)&&(!q||nk(x.fio+' '+x.coach).includes(q)));
   const evs=new Map();
   L.slice().sort((a,b)=>a.day-b.day||a.ev-b.ev||(a.heat??1e9)-(b.heat??1e9)||(a.lane??99)-(b.lane??99)||a.grp.localeCompare(b.grp)||(a.seed??1e9)-(b.seed??1e9)).forEach(x=>{const k=x.day+'|'+x.ev;(evs.get(k)||evs.set(k,[]).get(k)).push(x)});
   let h='';
@@ -959,8 +961,8 @@ function renderSta(){
 function renderEnt(){
   const tb=$('etb');
   if(!ents.length){tb.innerHTML='<tr><td colspan="7" style="padding:24px;text-align:center;color:var(--mute)">Заявка не загружена. Добавьте файл технической заявки (.xls или .xlsx).</td></tr>';$('ecnt').textContent='';return}
-  const q=nk($('eq').value),d=parseInt($('ed').value)||0,s=$('es').value,g=$('eg').value,gp=$('ep').value,t=$('et').value,n=+$('eh').value;
-  const L=ents.filter(e=>(!d||e.day===d)&&(!s||e.dist===s)&&(!g||e.sex===g)&&(!gp||e.grp===gp)&&(!t||e.team===t)&&(!q||nk(e.fio+' '+e.coach).includes(q)));
+  const q=nk($('eq').value),d=parseInt($('ed').value)||0,s=$('es').value,g=$('eg').value,gp=$('ep').value,t=$('et').value,tc=$('ec').value,n=+$('eh').value;
+  const L=ents.filter(e=>(!d||e.day===d)&&(!s||e.dist===s)&&(!g||e.sex===g)&&(!gp||e.grp===gp)&&(!t||e.team===t)&&(!tc||cm(e.coach,tc))&&(!q||nk(e.fio+' '+e.coach).includes(q)));
   const ev=new Map();
   L.slice().sort((x,y)=>x.day-y.day||x.ord-y.ord||x.sex.localeCompare(y.sex)||x.grp.localeCompare(y.grp)||(x.t??1e9)-(y.t??1e9)||x.fio.localeCompare(y.fio,'ru'))
    .forEach(e=>{const k=[e.day,e.dist,e.sex,e.grp].join('|');(ev.get(k)||ev.set(k,[]).get(k)).push(e)});
@@ -1031,8 +1033,8 @@ function fixCoaches(){
 const fixRows=tb=>tb.querySelectorAll('tr.ev>td[colspan],tr.hp>td[colspan]').forEach(td=>{if(!td.firstElementChild||!td.firstElementChild.classList.contains('evi')){const d=document.createElement('div');d.className='evi';while(td.firstChild)d.appendChild(td.firstChild);td.appendChild(d)}});      // подписи групп остаются на виду при горизонтальной прокрутке
 let grpList=[];
 function render(){
-  const q=$('q').value.trim().toLowerCase(),f={date:$('fd').value,dist:$('fs').value,sex:$('fg').value,grp:$('fp').value,team:$('ft').value},m=$('fm').checked,u=$('fu').checked;
-  const out=rows.filter(r=>(!f.date||r.date===f.date)&&(!f.dist||r.dist===f.dist)&&(!f.sex||r.sex===f.sex)&&(!f.grp||r.grp===f.grp)&&(!f.team||r.team===f.team)&&(!m||(r.pl>=1&&r.pl<=3))&&(!u||isUp(r))&&(!q||[r.fio,r.club,r.coach,r.city].join(' ').toLowerCase().includes(q)));
+  const q=$('q').value.trim().toLowerCase(),f={date:$('fd').value,dist:$('fs').value,sex:$('fg').value,grp:$('fp').value,team:$('ft').value,coach:$('fc').value},m=$('fm').checked,u=$('fu').checked;
+  const out=rows.filter(r=>(!f.date||r.date===f.date)&&(!f.dist||r.dist===f.dist)&&(!f.sex||r.sex===f.sex)&&(!f.grp||r.grp===f.grp)&&(!f.team||r.team===f.team)&&(!f.coach||cm(r.coach,f.coach))&&(!m||(r.pl>=1&&r.pl<=3))&&(!u||isUp(r))&&(!q||[r.fio,r.club,r.coach,r.city].join(' ').toLowerCase().includes(q)));
   $('rtab').classList.remove('mx');
   let h='',last='';grpList=[];
   for(const r of out){
@@ -1043,7 +1045,7 @@ function render(){
     const c=r.pl?(r.pl<4?' p'+r.pl:''):' st';
     h+=`<tr class="${c.trim()}"><td class="pl">${r.pl??''}</td><td><a class="nm" data-n="${esc(r.fio)}">${esc(r.fio)}</a></td><td>${esc(r.yob)}</td><td>${esc(r.club||'')}</td><td>${esc(r.city||'')}</td><td class="t">${r.st?esc(r.st):esc(fmtT(r.res))}${legsHtml(r)}</td><td>${rcell(r)}</td><td>${esc(r.coach||'')}</td></tr>`;
   }
-  const ro=relays.filter(r=>(!f.date||r.date===f.date)&&(!f.dist||r.dist===f.dist)&&!f.sex&&(!f.grp||r.grp===f.grp)&&(!f.team||r.team===f.team||r.club===f.team)&&!u&&(!m||(r.pl>=1&&r.pl<=3))&&(!q||[r.fio,r.club,r.city].join(' ').toLowerCase().includes(q)));
+  const ro=relays.filter(r=>(!f.date||r.date===f.date)&&(!f.dist||r.dist===f.dist)&&!f.sex&&!f.coach&&(!f.grp||r.grp===f.grp)&&(!f.team||r.team===f.team||r.club===f.team)&&!u&&(!m||(r.pl>=1&&r.pl<=3))&&(!q||[r.fio,r.club,r.city].join(' ').toLowerCase().includes(q)));
   {let lk='';for(const r of ro){const k=r.date+r.dist+r.grp;if(k!==lk){lk=k;h+=`<tr class="ev"><td colspan="8">${esc(r.dist)}<span>${esc(r.sex)}${r.grp?', '+esc(r.grp):''}${r.date?' · '+esc(r.date):''}</span></td></tr>`}
     const c=r.pl?(r.pl<4?' p'+r.pl:''):' st';
     h+=`<tr class="${c.trim()}"><td class="pl">${r.pl??''}</td><td style="text-align:left">${esc(r.fio)}</td><td></td><td>${esc(r.club||'')}</td><td>${esc(r.city||'')}</td><td class="t">${r.st?esc(r.st):esc(r.sec!=null?fS(r.sec):r.res)}</td><td></td><td></td></tr>`}}
