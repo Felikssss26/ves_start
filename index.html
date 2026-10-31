@@ -1170,16 +1170,18 @@ const artStyle=c=>' style="--art:url(\'data:image/svg+xml,'+encodeURIComponent(A
 function renderHome(){
   const list=allCat().slice().sort((a,b)=>(b.start||'').localeCompare(a.start||''));
   const SEC=['Предстоящие','Текущие','Архив'];      // предстоящие — без материалов; текущие — есть стартовый протокол/заявка, итогов нет; архив — есть итоги
-  const secOf=c=>c.user?2:(c.upcoming||!c.files.length)?0:c.files.flatMap(f=>f.kinds||[f.kind]).includes('itog')?2:1;
+  const pd=n=>String(n).padStart(2,'0'),nw=new Date(),today=nw.getFullYear()+'-'+pd(nw.getMonth()+1)+'-'+pd(nw.getDate());
+  const endOf=c=>{const m=String(c.date||'').match(/(\d{2})\.(\d{2})\.(\d{4})\s*$/);return c.end||(m?m[3]+'-'+m[2]+'-'+m[1]:c.start||'')};      // последний день проведения
+  const secOf=c=>{if(c.user)return 2;const s0=c.start&&c.start.length===10?c.start:'',e0=endOf(c)||s0;if(!s0)return c.files.length?2:0;return s0>today?0:e0>=today?1:2};      // по датам: ещё не начались / идут / прошли
   const html=c=>{
     const kinds=[...new Set(c.files.flatMap(f=>f.kinds||[f.kind]))].filter(k=>KINDS[k]).sort((x,y)=>Object.keys(KINDS).indexOf(x)-Object.keys(KINDS).indexOf(y));
-    if(c.upcoming||!c.files.length){      // предстоящее соревнование: материалов ещё нет, карточка не открывается
+    if(secOf(c)===0||!c.files.length){      // предстоящее соревнование: материалов ещё нет, карточка не открывается
       const d=c.start&&c.start.length===10?Math.round((new Date(c.start+'T00:00:00')-new Date(new Date().toDateString()))/864e5):null;
       const left=d==null||d<0?'':d===0?' Сегодня.':d===1?' Завтра.':' Через '+d+' дн.';
       const dc=c.docs&&c.docs.length,op=dc||kinds.length,tg=op?'button':'div';
       return `<${tg} class="ccard upc${op?' hasdocs':''}"${op?' data-open="'+esc(c.id)+'"':''}${artStyle(c)}><span class="cdate">${esc(c.date||'')}<b class="badge">Предстоящее</b></span><span class="ctitle">${esc(c.title)}</span><span class="cplace">${ICO}${placeHtml(c)}</span>${venueHtml(c)}${(kinds.length||dc)?'<span class="cchips">'+kinds.map(k=>`<i>${esc(KINDS[k])}</i>`).join('')+(dc?'<i>Положение</i>':'')+'</span>':''}<span class="cnote">${kinds.length?'Итоги появятся после соревнования.':'Материалы появятся после соревнования.'}${left}</span></${tg}>`;
     }
-    const pre=!kinds.includes('itog');      // есть стартовый протокол или заявка, итогов ещё нет
+    const pre=secOf(c)===1&&!kinds.includes('itog');      // есть стартовый протокол или заявка, итогов ещё нет
     return `<button class="ccard${pre?' pre':''}" data-open="${esc(c.id)}"${artStyle(c)}><span class="cdate">${esc(c.date||'')}${pre?'<b class="badge">Итогов пока нет</b>':''}</span><span class="ctitle">${esc(c.title)}</span>`+
       `<span class="cplace">${ICO}${placeHtml(c)}</span>${venueHtml(c)}<span class="cchips">${kinds.map(k=>`<i>${esc(KINDS[k])}</i>`).join('')}${c.docs&&c.docs.length?'<i>Положение</i>':''}</span>${c.note?`<span class="cnote">${esc(c.note)}</span>`:''}</button>`};
   $('cgrid').innerHTML=SEC.map((t,i)=>{const L=list.filter(c=>secOf(c)===i);return L.length?`<h3 class="csec">${t}</h3>`+L.map(html).join(''):''}).join('')+
