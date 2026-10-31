@@ -178,7 +178,8 @@ html[data-view="pc"] tr.st td.t{font-size:12px;white-space:normal}
 .swt{font:700 clamp(40px,12vw,64px)/1.1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center;font-variant-numeric:tabular-nums;padding:14px 0;letter-spacing:1px}
 .swb{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:6px 0 12px}.swb .btn{min-width:92px;padding:12px 16px;font-size:16px}
 .swf{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:0 0 10px}.swf label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute)}.swf input,.swf select{padding:9px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:15px}
-.swb #swgo,.swb #swlap{min-width:min(44vw,184px);padding:26px 20px;font-size:26px;border-radius:14px}
+.swb #swgo,.swb #swlap,.swb #swrs{min-width:min(44vw,184px);padding:26px 20px;font-size:26px;border-radius:14px}
+.swb #swgo{background:#1e9e4a;color:#fff}.swb #swgo.run{background:#d63031;color:#fff}
 .swl{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin:0 0 8px;font-size:13px;color:var(--mute)}.swl span{background:var(--accbg);padding:3px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
 .ccard.upc.hasdocs{cursor:pointer}.ccard.upc.hasdocs:hover,.ccard.upc.hasdocs:focus-visible{transform:translateY(-2px);box-shadow:0 8px 22px rgba(0,0,0,.18)}
 .pol{margin:0 0 16px;text-align:center}.pol figcaption{font-weight:600;margin:0 0 6px;color:var(--mute)}.pol img{max-width:min(100%,900px);height:auto;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.12)}
@@ -1099,7 +1100,7 @@ function openAth(n){
     const res=lg!=null?esc(fS(lg)):o.r?((o.r.pl?'<span style="font-weight:700">'+o.r.pl+' место</span><br>':'')+esc(o.r.st?o.r.st:fmtT(o.r.res))):'—';      // место и время — в две строки
     return `<tr><td>${esc(o.day||fb)}</td><td>${esc(o.dist)}${(o.r||o.e)?', '+esc((o.r||o.e).grp||''):''}</td><td class="t">${o.e||o.s?(es!=null?esc(fS(es))+(o.e&&o.e.oc&&o.e.t===es?' (вк)':''):(o.s&&o.s.seedOff&&!o.e?'—':'без времени')):'—'}</td><td>${o.s?(o.s.heat!=null?'Заплыв '+fh(o.s.heat)+(o.s.lane?', дор. '+o.s.lane:''):'не сформирован'):'—'}</td><td class="t">${res}</td><td class="t">${df}</td><td class="t">${pv?esc(fS(pv.t))+'<div class="legs" style="min-width:0">'+esc(pv.lab)+'</div>':'—'}</td><td class="t">${dp}</td><td>${o.r?rcell(o.r):''}</td></tr>`}).join('');
   $('dn').textContent=n;
-  $('db').innerHTML=`<p style="margin:0 0 10px;color:var(--mute)">${esc(f.yob||'')} г.р. · ${esc(f.team)}${f.city?', '+esc(f.city):''}<br>Тренер: ${esc(coach)}${a.length?`<br>Медали: золото ${md[0]}, серебро ${md[1]}, бронза ${md[2]}`:''}</p><div class="wrap"><table style="min-width:900px"><thead><tr><th>День<th>Дистанция<th>Заявка<th>Заплыв<th>Итог<th>Итог к заявке<th>Прошлый результат<th>Итог к прошлому<th>Разряд</thead><tbody>${tr}</tbody></table></div>${comps.length>1?`<p style="margin:10px 0 0"><button class="btn" data-cmp="${esc(n)}">Динамика по соревнованиям</button></p>`:''}<p style="margin:10px 0 0"><button class="btn ghost" style="color:var(--ink)" data-sw="${esc(n)}">⏱ Самостоятельный замер</button></p>`;
+  $('db').innerHTML=`<p style="margin:0 0 10px;color:var(--mute)">${esc(f.yob||'')} г.р. · ${esc(f.team)}${f.city?', '+esc(f.city):''}<br>Тренер: ${esc(coach)}${a.length?`<br>Медали: золото ${md[0]}, серебро ${md[1]}, бронза ${md[2]}`:''}</p><div class="wrap"><table style="min-width:900px"><thead><tr><th>День<th>Дистанция<th>Заявка<th>Заплыв<th>Итог<th>Итог к заявке<th>Прошлый результат<th>Итог к прошлому<th>Разряд</thead><tbody>${tr}</tbody></table></div><p style="margin:10px 0 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center">${comps.length>1?`<button class="btn" data-cmp="${esc(n)}">Динамика по соревнованиям</button>`:''}<button class="btn ghost" style="color:var(--ink)" data-sw="${esc(n)}">⏱ Самостоятельный замер</button></p>`;
   if(!$('dlg').open)$('dlg').showModal();
 }
 document.addEventListener('click',e=>{const d=e.target.dataset||{};if(d.lgi!==undefined){openLeg(+d.lgi,d.lgs);return}if(d.n)openAth(d.n);if(d.cmp){if($('dlg').open)$('dlg').close();$('cm').value='a';$('ca').value=d.cmp;showTab('cmp');renderCmp()}});
@@ -1143,7 +1144,7 @@ $('dlg').addEventListener('click',e=>{if(e.target===$('dlg'))$('dlg').close()});
     const sync=()=>{const i=+$('swev').value,o=ev[i];$('swdl').classList.toggle('hide',!!o);if(o){$('swheat').value=o.heat!=null?Math.floor(o.heat):'';$('swlane').value=o.lane??''}};
     if(ev.length)$('swev').value='0';sync();$('swev').onchange=sync;$('swwho').oninput=()=>{who=$('swwho').value};
     $('swv2').onclick=()=>{view='tbl';draw()};
-    const upd=()=>{$('swgo').textContent=run?'Стоп':(acc?'Продолжить':'Старт');$('swlaps').innerHTML=laps.map((v,i)=>`<span>${i+1}: ${fT(v)}</span>`).join('');tick()};
+    const upd=()=>{$('swgo').textContent=run?'Стоп':(acc?'Продолжить':'Старт');$('swgo').classList.toggle('run',run);$('swlaps').innerHTML=laps.map((v,i)=>`<span>${i+1}: ${fT(v)}</span>`).join('');tick()};
     $('swgo').onclick=()=>{if(run){acc+=now()-t0;run=false;cancelAnimationFrame(raf);unwake()}else{t0=now();run=true;wake()}upd();tick()};
     $('swlap').onclick=()=>{if(run||acc){laps.push(sec());upd()}};
     $('swrs').onclick=()=>{run=false;acc=0;laps=[];cancelAnimationFrame(raf);unwake();$('swmsg').textContent='';upd()};
